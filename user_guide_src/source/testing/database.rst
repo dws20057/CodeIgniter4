@@ -10,9 +10,13 @@ The Test Class
 ==============
 
 In order to take advantage of the built-in database tools that CodeIgniter provides for testing, your
-tests must extend ``\CIDatabaseTestCase``::
+tests must extend ``CIDatabaseTestCase``::
 
-    class MyTests extends \CIDatabaseTestCase
+    <?php namespace App\Database;
+
+    use CodeIgniter\Test\CIDatabaseTestCase;
+
+    class MyTests extends CIDatabaseTestCase
     {
         . . .
     }
@@ -21,7 +25,11 @@ Because special functionality executed during the ``setUp()`` and ``tearDown()``
 that you call the parent's methods if you need to use those methods, otherwise you will lose much
 of the functionality described here::
 
-    class MyTests extends \CIDatabaseTestCase
+    <?php namespace App\Database;
+
+    use CodeIgniter\Test\CIDatabaseTestCase;
+
+    class MyTests extends CIDatabaseTestCase
     {
         public function setUp()
         {
@@ -43,7 +51,7 @@ Test Database Setup
 
 When running database tests, you need to provide a database that can be used during testing. Instead of
 using the PHPUnit built-in database features, the framework provides tools specific to CodeIgniter. The first
-step is to ensure that you have a ``tests`` database group setup in **application/Config/Database.php**.
+step is to ensure that you have a ``tests`` database group setup in **app/Config/Database.php**.
 This specifies a database connection that is only used while running tests, to keep your other data safe.
 
 If you have multiple developers on your team, you will likely want to keep your credentials store in
@@ -63,7 +71,11 @@ it is in a known state for every test. You can use migrations and seeds to setup
 by adding a couple of class properties to your test.
 ::
 
-    class MyTests extends \CIDatabaseTestCase
+    <?php namespace App\Database;
+
+    use CodeIgniter\Test\CIDatabaseTestCase;
+
+    class MyTests extends\CIDatabaseTestCase
     {
         protected $refresh  = true;
         protected $seed     = 'TestSeeder';

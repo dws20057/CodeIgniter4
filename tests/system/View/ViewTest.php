@@ -11,11 +11,11 @@ class ViewTest extends \CIUnitTestCase
 
 	//--------------------------------------------------------------------
 
-	public function setUp()
+	protected function setUp()
 	{
 		parent::setUp();
 
-		$this->loader   = new \CodeIgniter\Autoloader\FileLocator(new \Config\Autoload());
+		$this->loader   = \CodeIgniter\Config\Services::locator();
 		$this->viewsDir = __DIR__ . '/Views';
 		$this->config   = new Config\View();
 	}
@@ -264,6 +264,71 @@ class ViewTest extends \CIUnitTestCase
 		$expected = '<h1>Hello World</h1>';
 		$this->assertEquals($expected, $view->renderString('<h1><?= $testString ?></h1>', [], true));
 		$this->assertEquals(0, count($view->getPerformanceData()));
+	}
+
+	public function testRenderLayoutExtendsCorrectly()
+	{
+		$view = new View($this->config, $this->viewsDir, $this->loader);
+
+		$view->setVar('testString', 'Hello World');
+		$expected = "<p>Open</p>\n<h1>Hello World</h1>";
+
+		$this->assertContains($expected, $view->render('extend'));
+	}
+
+	public function testRenderLayoutMakesDataAvailableToBoth()
+	{
+		$view = new View($this->config, $this->viewsDir, $this->loader);
+
+		$view->setVar('testString', 'Hello World');
+		$expected = "<p>Open</p>\n<h1>Hello World</h1>\n<p>Hello World</p>";
+
+		$this->assertContains($expected, $view->render('extend'));
+	}
+
+	public function testRenderLayoutSupportsMultipleOfSameSection()
+	{
+		$view = new View($this->config, $this->viewsDir, $this->loader);
+
+		$view->setVar('testString', 'Hello World');
+		$expected = "<p>First</p>\n<p>Second</p>";
+
+		$this->assertContains($expected, $view->render('extend_two'));
+	}
+
+	public function testRenderLayoutWithInclude()
+	{
+		$view = new View($this->config, $this->viewsDir, $this->loader);
+
+		$view->setVar('testString', 'Hello World');
+		$expected = "<p>Open</p>\n<h1>Hello World</h1>";
+
+		$content = $view->render('extend_include');
+
+		$this->assertTrue(strpos($content, '<p>Open</p>') !== false);
+		$this->assertTrue(strpos($content, '<h1>Hello World</h1>') !== false);
+		$this->assertEquals(2, substr_count($content, 'Hello World'));
+	}
+
+	public function testRenderLayoutBroken()
+	{
+		$view = new View($this->config, $this->viewsDir, $this->loader);
+
+		$view->setVar('testString', 'Hello World');
+		$expected = '';
+
+		$this->expectException(\RuntimeException::class);
+		$this->assertContains($expected, $view->render('broken'));
+	}
+
+	public function testRenderLayoutNoContentSection()
+	{
+		$view = new View($this->config, $this->viewsDir, $this->loader);
+
+		$view->setVar('testString', 'Hello World');
+		$expected = '';
+
+		$this->assertContains($expected, $view->render('apples'));
 	}
 
 }

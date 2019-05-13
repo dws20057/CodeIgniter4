@@ -1,4 +1,4 @@
-<?php namespace CodeIgniter\Validation;
+<?php
 
 /**
  * CodeIgniter
@@ -7,7 +7,7 @@
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,17 +29,19 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
+
+namespace CodeIgniter\Validation;
 
 use Config\Database;
 
 /**
- * Rules.
+ * Validation Rules.
  *
  * @package CodeIgniter\Validation
  */
@@ -64,7 +66,23 @@ class Rules
 	//--------------------------------------------------------------------
 
 	/**
+	 * Equals the static value provided.
+	 *
+	 * @param string $str
+	 * @param string $val
+	 *
+	 * @return boolean
+	 */
+	public function equals(string $str = null, string $val): bool
+	{
+		return $str === $val;
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
 	 * Returns true if $str is $val characters long.
+	 * $val = "5" (one) | "5,8,12" (multiple values)
 	 *
 	 * @param string $str
 	 * @param string $val
@@ -74,12 +92,16 @@ class Rules
 	 */
 	public function exact_length(string $str = null, string $val, array $data): bool
 	{
-		if (! is_numeric($val))
+		$val = explode(',', $val);
+		foreach ($val as $tmp)
 		{
-			return false;
+			if (is_numeric($tmp) && (int)$tmp === mb_strlen($str))
+			{
+				return true;
+			}
 		}
 
-		return ((int) $val === mb_strlen($str));
+		return false;
 	}
 
 	//--------------------------------------------------------------------
@@ -233,11 +255,6 @@ class Rules
 	 */
 	public function max_length(string $str = null, string $val, array $data): bool
 	{
-		if (! is_numeric($val))
-		{
-			return false;
-		}
-
 		return ($val >= mb_strlen($str));
 	}
 
@@ -254,12 +271,22 @@ class Rules
 	 */
 	public function min_length(string $str = null, string $val, array $data): bool
 	{
-		if (! is_numeric($val))
-		{
-			return false;
-		}
-
 		return ($val <= mb_strlen($str));
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * Does not equal the static value provided.
+	 *
+	 * @param string $str
+	 * @param string $val
+	 *
+	 * @return boolean
+	 */
+	public function not_equals(string $str = null, string $val): bool
+	{
+		return $str !== $val;
 	}
 
 	//--------------------------------------------------------------------
@@ -284,7 +311,7 @@ class Rules
 	//--------------------------------------------------------------------
 
 	/**
-	 * The field is required when any of the other fields are present
+	 * The field is required when any of the other required fields are present
 	 * in the data.
 	 *
 	 * Example (field is required when the password field is present):
@@ -304,9 +331,9 @@ class Rules
 		// If the field is present we can safely assume that
 		// the field is here, no matter whether the corresponding
 		// search field is present or not.
-		$present = $this->required($data[$str] ?? null);
+		$present = $this->required($str ?? '');
 
-		if ($present === true)
+		if ($present)
 		{
 			return true;
 		}
@@ -336,8 +363,8 @@ class Rules
 	//--------------------------------------------------------------------
 
 	/**
-	 * The field is required when all of the other fields are not present
-	 * in the data.
+	 * The field is required when all of the other fields are present
+	 * in the data but not required.
 	 *
 	 * Example (field is required when the id or email field is missing):
 	 *
@@ -356,9 +383,9 @@ class Rules
 		// If the field is present we can safely assume that
 		// the field is here, no matter whether the corresponding
 		// search field is present or not.
-		$present = $this->required($data[$str] ?? null);
+		$present = $this->required($str ?? '');
 
-		if ($present === true)
+		if ($present)
 		{
 			return true;
 		}

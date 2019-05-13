@@ -1,6 +1,4 @@
-<?php namespace CodeIgniter\Events;
-
-use Config\Services;
+<?php
 
 /**
  * CodeIgniter
@@ -9,7 +7,7 @@ use Config\Services;
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,12 +29,17 @@ use Config\Services;
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
+
+namespace CodeIgniter\Events;
+
+use Config\Services;
+
 define('EVENT_PRIORITY_LOW', 200);
 define('EVENT_PRIORITY_NORMAL', 100);
 define('EVENT_PRIORITY_HIGH', 10);
@@ -112,12 +115,10 @@ class Events
 
 		foreach (static::$files as $file)
 		{
-			if (! is_file($file))
+			if (is_file($file))
 			{
-				continue;
+				include $file;
 			}
-
-			include $file;
 		}
 
 		static::$initialized = true;
@@ -138,7 +139,7 @@ class Events
 	 * @param callable   $callback
 	 * @param integer    $priority
 	 */
-	public static function on($event_name, callable $callback, $priority = EVENT_PRIORITY_NORMAL)
+	public static function on($event_name, $callback, $priority = EVENT_PRIORITY_NORMAL)
 	{
 		if (! isset(static::$listeners[$event_name]))
 		{
@@ -183,9 +184,7 @@ class Events
 		{
 			$start = microtime(true);
 
-			$result = static::$simulate === false
-				? $listener(...$arguments)
-				: true;
+			$result = static::$simulate === false ? call_user_func($listener, ...$arguments) : true;
 
 			if (CI_DEBUG)
 			{
@@ -345,5 +344,4 @@ class Events
 	}
 
 	//--------------------------------------------------------------------
-
 }

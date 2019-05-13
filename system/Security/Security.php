@@ -1,4 +1,4 @@
-<?php namespace CodeIgniter\Security;
+<?php
 
 /**
  * CodeIgniter
@@ -7,7 +7,7 @@
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,12 +29,14 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
+
+namespace CodeIgniter\Security;
 
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\Security\Exceptions\SecurityException;
@@ -161,6 +163,8 @@ class Security
 	 * setup initial state.
 	 *
 	 * @param \Config\App $config
+	 *
+	 * @throws \Exception
 	 */
 	public function __construct($config)
 	{
@@ -190,9 +194,10 @@ class Security
 	/**
 	 * CSRF Verify
 	 *
-	 * @param  RequestInterface $request
+	 * @param RequestInterface $request
+	 *
 	 * @return $this|false
-	 * @throws \LogicException
+	 * @throws \Exception
 	 */
 	public function CSRFVerify(RequestInterface $request)
 	{
@@ -264,7 +269,7 @@ class Security
 	 *
 	 * @return string
 	 */
-	public function getCSRFHash()
+	public function getCSRFHash(): string
 	{
 		return $this->CSRFHash;
 	}
@@ -276,7 +281,7 @@ class Security
 	 *
 	 * @return string
 	 */
-	public function getCSRFTokenName()
+	public function getCSRFTokenName(): string
 	{
 		return $this->CSRFTokenName;
 	}
@@ -287,8 +292,9 @@ class Security
 	 * Sets the CSRF Hash and cookie.
 	 *
 	 * @return string
+	 * @throws \Exception
 	 */
-	protected function CSRFSetHash()
+	protected function CSRFSetHash(): string
 	{
 		if ($this->CSRFHash === null)
 		{
@@ -327,7 +333,7 @@ class Security
 	 *
 	 * @return string
 	 */
-	public function sanitizeFilename($str, $relative_path = false)
+	public function sanitizeFilename(string $str, bool $relative_path = false): string
 	{
 		$bad = $this->filenameBadChars;
 

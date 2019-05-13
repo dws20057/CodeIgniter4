@@ -7,7 +7,7 @@
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,14 +29,20 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
 use Config\Services;
+
+/**
+ * CodeIgniter Form Helpers
+ *
+ * @package CodeIgniter
+ */
 
 //--------------------------------------------------------------------
 
@@ -65,6 +71,12 @@ if (! function_exists('form_open'))
 			$action = site_url($action);
 		}
 
+		if (is_array($attributes) && array_key_exists('csrf_id', $attributes))
+		{
+			$csrfId = $attributes['csrf_id'];
+			unset($attributes['csrf_id']);
+		}
+
 		$attributes = stringify_attributes($attributes);
 
 		if (stripos($attributes, 'method=') === false)
@@ -80,19 +92,19 @@ if (! function_exists('form_open'))
 		$form = '<form action="' . $action . '"' . $attributes . ">\n";
 
 		// Add CSRF field if enabled, but leave it out for GET requests and requests to external websites
-		$before = Services::filters()->getFilters()['before'];
+		$before = Services::filters()
+						  ->getFilters()['before'];
 
-		if ((in_array('csrf', $before) || array_key_exists('csrf', $before)) && strpos($action, base_url()) !== false && ! stripos($form, 'method="get"')
-		)
+		if ((in_array('csrf', $before) || array_key_exists('csrf', $before)) && strpos($action, base_url()) !== false && ! stripos($form, 'method="get"'))
 		{
-			$hidden[csrf_token()] = csrf_hash();
+			$form .= csrf_field($csrfId ?? null);
 		}
 
 		if (is_array($hidden))
 		{
 			foreach ($hidden as $name => $value)
 			{
-				$form .= '<input type="hidden" name="' . $name . '" value="' . esc($value, 'html') . '" style="display: none;" />' . "\n";
+				$form .= form_hidden($name, $value);
 			}
 		}
 
@@ -167,7 +179,7 @@ if (! function_exists('form_hidden'))
 
 		if (! is_array($value))
 		{
-			$form .= '<input type="hidden" name="' . $name . '" value="' . esc($value, 'html') . "\" />\n";
+			$form .= '<input type="hidden" name="' . $name . '" value="' . esc($value, 'html') . "\" style=\"display:none;\" />\n";
 		}
 		else
 		{
@@ -242,9 +254,9 @@ if (! function_exists('form_upload'))
 	 *
 	 * Identical to the input function but adds the "file" type
 	 *
-	 * @param mixed
-	 * @param string
-	 * @param mixed
+	 * @param mixed  $data
+	 * @param string $value
+	 * @param mixed  $extra
 	 *
 	 * @return string
 	 */
@@ -304,10 +316,10 @@ if (! function_exists('form_multiselect'))
 	/**
 	 * Multi-select menu
 	 *
-	 * @param string
-	 * @param array
-	 * @param mixed
-	 * @param mixed
+	 * @param string $name
+	 * @param array  $options
+	 * @param array  $selected
+	 * @param mixed  $extra
 	 *
 	 * @return string
 	 */
@@ -615,7 +627,7 @@ if (! function_exists('form_datalist'))
 	 *
 	 * @return string
 	 */
-	function form_datalist($name, $value, $options)
+	function form_datalist(string $name, string $value, array $options): string
 	{
 		$data = [
 			'type'  => 'text',
@@ -900,12 +912,12 @@ if (! function_exists('parse_form_attributes'))
 	 *
 	 * Helper function used by some of the form helpers
 	 *
-	 * @param array $attributes List of attributes
-	 * @param array $default    Default values
+	 * @param string|array $attributes List of attributes
+	 * @param array        $default    Default values
 	 *
 	 * @return string
 	 */
-	function parse_form_attributes($attributes, $default): string
+	function parse_form_attributes($attributes, array $default): string
 	{
 		if (is_array($attributes))
 		{
@@ -927,15 +939,22 @@ if (! function_exists('parse_form_attributes'))
 
 		foreach ($default as $key => $val)
 		{
-			if ($key === 'value')
+			if (! is_bool($val))
 			{
-				$val = esc($val, 'html');
+				if ($key === 'value')
+				{
+					$val = esc($val, 'html');
+				}
+				elseif ($key === 'name' && ! strlen($default['name']))
+				{
+					continue;
+				}
+				$att .= $key . '="' . $val . '" ';
 			}
-			elseif ($key === 'name' && ! strlen($default['name']))
+			else
 			{
-				continue;
+				$att .= $key . ' ';
 			}
-			$att .= $key . '="' . $val . '" ';
 		}
 
 		return $att;

@@ -1,4 +1,4 @@
-<?php namespace CodeIgniter\API;
+<?php
 
 /**
  * CodeIgniter
@@ -7,7 +7,7 @@
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,12 +29,14 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
+
+namespace CodeIgniter\API;
 
 use Config\Format;
 use CodeIgniter\HTTP\Response;
@@ -95,9 +97,9 @@ trait ResponseTrait
 	 * Provides a single, simple method to return an API response, formatted
 	 * to match the requested format, with proper content-type and status code.
 	 *
-	 * @param null    $data
-	 * @param integer $status
-	 * @param string  $message
+	 * @param array|string|null $data
+	 * @param integer           $status
+	 * @param string            $message
 	 *
 	 * @return mixed
 	 */
@@ -327,9 +329,9 @@ trait ResponseTrait
 	 * Handles formatting a response. Currently makes some heavy assumptions
 	 * and needs updating! :)
 	 *
-	 * @param null $data
+	 * @param string|array|null $data
 	 *
-	 * @return null|string
+	 * @return string|null
 	 */
 	protected function format($data = null)
 	{

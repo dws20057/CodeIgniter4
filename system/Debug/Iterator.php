@@ -1,5 +1,4 @@
-<?php namespace CodeIgniter\Debug;
-
+<?php
 /**
  * CodeIgniter
  *
@@ -7,7 +6,7 @@
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,12 +28,14 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
+
+namespace CodeIgniter\Debug;
 
 /**
  * Iterator for debugging.
@@ -64,12 +65,12 @@ class Iterator
 	 * Tests are simply closures that the user can define any sequence of
 	 * things to happen during the test.
 	 *
-	 * @param $name
+	 * @param string   $name
 	 * @param \Closure $closure
 	 *
 	 * @return $this
 	 */
-	public function add($name, \Closure $closure)
+	public function add(string $name, \Closure $closure)
 	{
 		$name = strtolower($name);
 
@@ -88,9 +89,9 @@ class Iterator
 	 * @param integer $iterations
 	 * @param boolean $output
 	 *
-	 * @return string
+	 * @return string|null
 	 */
-	public function run($iterations = 1000, $output = true)
+	public function run(int $iterations = 1000, bool $output = true)
 	{
 		foreach ($this->tests as $name => $test)
 		{
@@ -120,6 +121,8 @@ class Iterator
 		{
 			return $this->getReport();
 		}
+
+		return null;
 	}
 
 	//--------------------------------------------------------------------
@@ -129,7 +132,7 @@ class Iterator
 	 *
 	 * @return string
 	 */
-	public function getReport()
+	public function getReport(): string
 	{
 		if (empty($this->results))
 		{

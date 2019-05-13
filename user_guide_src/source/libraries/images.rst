@@ -37,7 +37,7 @@ The available Handlers are as follows:
 - imagick   The ImageMagick library.
 
 If using the ImageMagick library, you must set the path to the library on your
-server in **application/Config/Images.php**.
+server in **app/Config/Images.php**.
 
 .. note:: The ImageMagick handler does NOT require the imagick extension to be
         loaded on the server. As long as your script can access the library
@@ -57,7 +57,7 @@ For example, to create an image thumbnail you'll do this::
 		->fit(100, 100, 'center')
 		->save('/path/to/image/mypic_thumb.jpg');
 
-The above code tells the library  to look for an image
+The above code tells the library to look for an image
 called *mypic.jpg* located in the source_image folder, then create a
 new image from it that is 100 x 100pixels using the GD2 image_library,
 and save it to a new file (the thumb). Since it is using the fit() method,
@@ -261,7 +261,7 @@ Adding a Text Watermark
 -----------------------
 
 You can overlay a text watermark onto the image very simply with the text() method. This is useful for placing copyright
-notices, photogropher names, or simply marking the images as a preview so they won't be used in other people's final
+notices, photographer names, or simply marking the images as a preview so they won't be used in other people's final
 products.
 
 ::

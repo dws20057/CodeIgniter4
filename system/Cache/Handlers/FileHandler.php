@@ -1,4 +1,4 @@
-<?php namespace CodeIgniter\Cache\Handlers;
+<?php
 
 /**
  * CodeIgniter
@@ -7,7 +7,7 @@
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,15 +29,21 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
-use CodeIgniter\Cache\CacheInterface;
+namespace CodeIgniter\Cache\Handlers;
 
+use CodeIgniter\Cache\CacheInterface;
+use CodeIgniter\Cache\Exceptions\CacheException;
+
+/**
+ * File system cache handler
+ */
 class FileHandler implements CacheInterface
 {
 
@@ -57,12 +63,22 @@ class FileHandler implements CacheInterface
 
 	//--------------------------------------------------------------------
 
+	/**
+	 * Constructor.
+	 *
+	 * @param  type $config
+	 * @throws type
+	 */
 	public function __construct($config)
 	{
-		$this->prefix = $config->prefix ?: '';
-		$this->path   = ! empty($config->storePath) ? $config->storePath : WRITEPATH . 'cache';
+		$path = ! empty($config->storePath) ? $config->storePath : WRITEPATH . 'cache';
+		if (! is_really_writable($path))
+		{
+			throw CacheException::forUnableToWrite($path);
+		}
 
-		$this->path = rtrim($this->path, '/') . '/';
+		$this->prefix = $config->prefix ?: '';
+		$this->path   = rtrim($path, '/') . '/';
 	}
 
 	//--------------------------------------------------------------------
@@ -90,7 +106,7 @@ class FileHandler implements CacheInterface
 
 		$data = $this->getItem($key);
 
-		return is_array($data) ? $data['data'] : false;
+		return is_array($data) ? $data['data'] : null;
 	}
 
 	//--------------------------------------------------------------------
@@ -329,14 +345,7 @@ class FileHandler implements CacheInterface
 	 */
 	protected function writeFile($path, $data, $mode = 'wb')
 	{
-		try
-		{
-			if (($fp = @fopen($path, $mode)) === false)
-			{
-				return false;
-			}
-		}
-		catch (\ErrorException $e)
+		if (($fp = @fopen($path, $mode)) === false)
 		{
 			return false;
 		}
@@ -374,7 +383,7 @@ class FileHandler implements CacheInterface
 	 *
 	 * @return boolean
 	 */
-	protected function deleteFiles($path, $del_dir = false, $htdocs = false, $_level = 0)
+	protected function deleteFiles(string $path, bool $del_dir = false, bool $htdocs = false, int $_level = 0): bool
 	{
 		// Trim the trailing slash
 		$path = rtrim($path, '/\\');
@@ -420,7 +429,7 @@ class FileHandler implements CacheInterface
 	 *
 	 * @return array|false
 	 */
-	protected function getDirFileInfo($source_dir, $top_level_only = true, $_recursion = false)
+	protected function getDirFileInfo(string $source_dir, bool $top_level_only = true, bool $_recursion = false)
 	{
 		static $_filedata = [];
 		$relative_path    = $source_dir;
@@ -471,11 +480,16 @@ class FileHandler implements CacheInterface
 	 *
 	 * @return array|false
 	 */
-	protected function getFileInfo(string $file, array $returned_values = ['name', 'server_path', 'size', 'date'])
+	protected function getFileInfo(string $file, $returned_values = ['name', 'server_path', 'size', 'date'])
 	{
 		if (! is_file($file))
 		{
 			return false;
+		}
+
+		if (is_string($returned_values))
+		{
+			$returned_values = explode(',', $returned_values);
 		}
 
 		foreach ($returned_values as $key)
@@ -483,33 +497,33 @@ class FileHandler implements CacheInterface
 			switch ($key)
 			{
 				case 'name':
-					$fileinfo['name'] = basename($file);
+					$fileInfo['name'] = basename($file);
 					break;
 				case 'server_path':
-					$fileinfo['server_path'] = $file;
+					$fileInfo['server_path'] = $file;
 					break;
 				case 'size':
-					$fileinfo['size'] = filesize($file);
+					$fileInfo['size'] = filesize($file);
 					break;
 				case 'date':
-					$fileinfo['date'] = filemtime($file);
+					$fileInfo['date'] = filemtime($file);
 					break;
 				case 'readable':
-					$fileinfo['readable'] = is_readable($file);
+					$fileInfo['readable'] = is_readable($file);
 					break;
 				case 'writable':
-					$fileinfo['writable'] = is_writable($file);
+					$fileInfo['writable'] = is_writable($file);
 					break;
 				case 'executable':
-					$fileinfo['executable'] = is_executable($file);
+					$fileInfo['executable'] = is_executable($file);
 					break;
 				case 'fileperms':
-					$fileinfo['fileperms'] = fileperms($file);
+					$fileInfo['fileperms'] = fileperms($file);
 					break;
 			}
 		}
 
-		return $fileinfo;
+		return $fileInfo;
 	}
 
 	//--------------------------------------------------------------------

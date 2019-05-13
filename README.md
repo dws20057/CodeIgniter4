@@ -5,10 +5,11 @@
 <br>
 
 ## What is CodeIgniter?
+
 CodeIgniter is a PHP full-stack web framework that is light, fast, flexible, and secure. 
 More information can be found at the [official site](http://codeigniter.com).
 
-This repository holds the pre-alpha code for CodeIgniter 4 only. 
+This repository holds the source code for CodeIgniter 4 only. 
 Version 4 is a complete rewrite to bring the quality and the code into a more modern version, 
 while still keeping as many of the things intact that has made people love the framework over the years. 
 
@@ -18,9 +19,12 @@ More information about the plans for version 4 can be found in [the announcement
 
 ### Documentation
 
-The current in-progress documentation can be found [here](https://codeigniter4.github.io/CodeIgniter4/). 
-As with the rest of the framework, it is currently a work in progress, and will see changes over time to structure, explanations, etc.
+The [User Guide](https://codeigniter4.github.io/userguide/) is the primary documentation for CodeIgniter 4. 
 
+The current **in-progress** User Guide can be found [here](https://codeigniter4.github.io/CodeIgniter4/). 
+As with the rest of the framework, it is a work in progress, and will see changes over time to structure, explanations, etc.
+
+You might also be interested in the [API documentation](https://codeigniter4.github.io/api/) for the framework components.
 
 ## Important Change with index.php
 
@@ -35,6 +39,7 @@ framework are exposed.
 The user guide updating and deployment is a bit awkward at the moment, but we are working on it!
 
 ## Repository Management
+
 We use Github issues to track **BUGS** and to track approved **DEVELOPMENT** work packages.
 We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
 FEATURE REQUESTS.
@@ -57,6 +62,7 @@ Remember that some components that were part of CodeIgniter 3 are being moved
 to optional packages, with their own repository.
 
 ## Contributing
+
 We **are** accepting contributions from the community, specifically those identified as part of phase 2.
 
 We will try to manage the process somewhat, by adding a "Help wanted" label to those that we are 
@@ -68,7 +74,9 @@ We are not looking for out-of-scope contributions, only those that would be cons
 Please read the [*Contributing to CodeIgniter*](https://github.com/codeigniter4/CodeIgniter4/blob/develop/contributing.md) section in the user guide
 
 ## Server Requirements
-PHP version 7.1 or higher is required, with the following extensions installed: 
+
+PHP version 7.2 or higher is required, with the following extensions installed: 
+
 
 - [intl](http://php.net/manual/en/intl.requirements.php)
 - [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
@@ -81,4 +89,5 @@ Additionally, make sure that the following extensions are enabled in your PHP:
 - xml (enabled by default - don't turn it off)
 
 ## Running CodeIgniter Tests
+
 Information on running CodeIgniter test suite can be found in the [README.md](tests/README.md) file in the tests directory.

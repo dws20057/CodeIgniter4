@@ -1,5 +1,5 @@
 <?php
-namespace CodeIgniter\CLI;
+
 
 /**
  * CodeIgniter
@@ -8,7 +8,7 @@ namespace CodeIgniter\CLI;
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -30,15 +30,21 @@ namespace CodeIgniter\CLI;
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
+namespace CodeIgniter\CLI;
+
+use CodeIgniter\Config\Services;
 use CodeIgniter\Controller;
 
+/**
+ * Command runner
+ */
 class CommandRunner extends Controller
 {
 
@@ -50,6 +56,8 @@ class CommandRunner extends Controller
 	protected $commands = [];
 
 	/**
+	 * Message logger.
+	 *
 	 * @var \CodeIgniter\Log\Logger
 	 */
 	protected $logger;
@@ -62,6 +70,8 @@ class CommandRunner extends Controller
 	 *
 	 * @param string $method
 	 * @param array  ...$params
+	 *
+	 * @throws \ReflectionException
 	 */
 	public function _remap($method, ...$params)
 	{
@@ -77,9 +87,12 @@ class CommandRunner extends Controller
 	//--------------------------------------------------------------------
 
 	/**
+	 * Default command.
+	 *
 	 * @param array $params
 	 *
 	 * @return mixed
+	 * @throws \ReflectionException
 	 */
 	public function index(array $params)
 	{
@@ -109,7 +122,7 @@ class CommandRunner extends Controller
 	{
 		if (! isset($this->commands[$command]))
 		{
-			CLI::error('Command \'' . $command . '\' not found');
+			CLI::error(lang('CLI.commandNotFound', [$command]));
 			CLI::newLine();
 			return;
 		}
@@ -128,23 +141,27 @@ class CommandRunner extends Controller
 	 * Scans all Commands directories and prepares a list
 	 * of each command with it's group and file.
 	 *
-	 * @return null|void
+	 * @throws \ReflectionException
 	 */
 	protected function createCommandList()
 	{
-		$files = service('locator')->listFiles('Commands/');
+		$files = Services::locator()->listFiles('Commands/');
 
 		// If no matching command files were found, bail
 		if (empty($files))
 		{
+			// This should never happen in unit testing.
+			// if it does, we have far bigger problems!
+			// @codeCoverageIgnoreStart
 			return;
+			// @codeCoverageIgnoreEnd
 		}
 
 		// Loop over each file checking to see if a command with that
 		// alias exists in the class. If so, return it. Otherwise, try the next.
 		foreach ($files as $file)
 		{
-			$className = service('locator')->findQualifiedNameFromPath($file);
+			$className = Services::locator()->findQualifiedNameFromPath($file);
 			if (empty($className) || ! class_exists($className))
 			{
 				continue;
@@ -184,7 +201,7 @@ class CommandRunner extends Controller
 	 *
 	 * @return array
 	 */
-	public function getCommands()
+	public function getCommands(): array
 	{
 		return $this->commands;
 	}

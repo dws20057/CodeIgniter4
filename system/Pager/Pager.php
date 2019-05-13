@@ -1,4 +1,4 @@
-<?php namespace CodeIgniter\Pager;
+<?php
 
 /**
  * CodeIgniter
@@ -7,7 +7,7 @@
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,12 +29,14 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
+
+namespace CodeIgniter\Pager;
 
 use CodeIgniter\Pager\Exceptions\PagerException;
 use Config\Services;
@@ -90,6 +92,12 @@ class Pager implements PagerInterface
 
 	//--------------------------------------------------------------------
 
+	/**
+	 * Constructor.
+	 *
+	 * @param type              $config
+	 * @param RendererInterface $view
+	 */
 	public function __construct($config, RendererInterface $view)
 	{
 		$this->config = $config;
@@ -164,7 +172,7 @@ class Pager implements PagerInterface
 	 *
 	 * @return string
 	 */
-	protected function displayLinks(string $group, string $template)
+	protected function displayLinks(string $group, string $template): string
 	{
 		$pager = new PagerRenderer($this->getDetails($group));
 
@@ -189,7 +197,7 @@ class Pager implements PagerInterface
 	 * @param integer $total
 	 * @param integer $segment
 	 *
-	 * @return mixed
+	 * @return $this
 	 */
 	public function store(string $group, int $page, int $perPage, int $total, int $segment = 0)
 	{
@@ -210,8 +218,8 @@ class Pager implements PagerInterface
 	/**
 	 * Sets the path that an aliased group of links will use.
 	 *
-	 * @param string $group
 	 * @param string $path
+	 * @param string $group
 	 *
 	 * @return mixed
 	 */
@@ -302,7 +310,7 @@ class Pager implements PagerInterface
 	 *
 	 * @return integer
 	 */
-	public function getFirstPage(string $group = 'default')
+	public function getFirstPage(string $group = 'default'): int
 	{
 		$this->ensureGroup($group);
 
@@ -321,39 +329,36 @@ class Pager implements PagerInterface
 	 *
 	 * @return string|\CodeIgniter\HTTP\URI
 	 */
-	public function getPageURI(int $page = null, string $group = 'default', $returnObject = false)
+	public function getPageURI(int $page = null, string $group = 'default', bool $returnObject = false)
 	{
 		$this->ensureGroup($group);
 
+		/**
+		 * @var \CodeIgniter\HTTP\URI $uri
+		 */
 		$uri = $this->groups[$group]['uri'];
 
 		$segment = $this->segment[$group] ?? 0;
+
+		if ($segment)
+		{
+			$uri->setSegment($segment, $page);
+		}
+		else
+		{
+			$uri->addQuery('page', $page);
+		}
 
 		if ($this->only)
 		{
 			$query = array_intersect_key($_GET, array_flip($this->only));
 
-			if ($segment > 0)
-			{
-				$uri->setSegment($segment, $page);
-			}
-			else
+			if (! $segment)
 			{
 				$query['page'] = $page;
 			}
 
 			$uri->setQueryArray($query);
-		}
-		else
-		{
-			if ($segment > 0)
-			{
-				$uri->setSegment($segment, $page);
-			}
-			else
-			{
-				$uri->addQuery('page', $page);
-			}
 		}
 
 		return $returnObject === true ? $uri : (string) $uri;
@@ -369,7 +374,7 @@ class Pager implements PagerInterface
 	 *
 	 * @return string|null
 	 */
-	public function getNextPageURI(string $group = 'default', $returnObject = false)
+	public function getNextPageURI(string $group = 'default', bool $returnObject = false)
 	{
 		$this->ensureGroup($group);
 
@@ -400,7 +405,7 @@ class Pager implements PagerInterface
 	 *
 	 * @return string|null
 	 */
-	public function getPreviousPageURI(string $group = 'default', $returnObject = false)
+	public function getPreviousPageURI(string $group = 'default', bool $returnObject = false)
 	{
 		$this->ensureGroup($group);
 

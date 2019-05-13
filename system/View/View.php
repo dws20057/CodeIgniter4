@@ -1,4 +1,4 @@
-<?php namespace CodeIgniter\View;
+<?php
 
 /**
  * CodeIgniter
@@ -7,7 +7,7 @@
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,12 +29,14 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
+
+namespace CodeIgniter\View;
 
 use CodeIgniter\View\Exceptions\ViewException;
 use Config\Services;
@@ -81,7 +83,7 @@ class View implements RendererInterface
 	/**
 	 * Logger instance.
 	 *
-	 * @var Logger
+	 * @var \CodeIgniter\Log\Logger
 	 */
 	protected $logger;
 
@@ -118,6 +120,29 @@ class View implements RendererInterface
 	 * @var integer
 	 */
 	protected $viewsCount = 0;
+
+	/**
+	 * The name of the layout being used, if any.
+	 * Set by the `extend` method used within views.
+	 *
+	 * @var string
+	 */
+	protected $layout;
+
+	/**
+	 * Holds the sections and their data.
+	 *
+	 * @var array
+	 */
+	protected $sections = [];
+
+	/**
+	 * The name of the current section being rendered,
+	 * if any.
+	 *
+	 * @var string
+	 */
+	protected $currentSection;
 
 	//--------------------------------------------------------------------
 
@@ -156,7 +181,7 @@ class View implements RendererInterface
 	 *
 	 * @return string
 	 */
-	public function render(string $view, array $options = null, $saveData = null): string
+	public function render(string $view, array $options = null, bool $saveData = null): string
 	{
 		$this->renderVars['start'] = microtime(true);
 
@@ -211,30 +236,37 @@ class View implements RendererInterface
 		$output = ob_get_contents();
 		@ob_end_clean();
 
+		// When using layouts, the data has already been stored
+		// in $this->sections, and no other valid output
+		// is allowed in $output so we'll overwrite it.
+		if (! is_null($this->layout) && empty($this->currentSection))
+		{
+			$layoutView   = $this->layout;
+			$this->layout = null;
+			$output       = $this->render($layoutView, $options, $saveData);
+		}
+
 		$this->logPerformance($this->renderVars['start'], microtime(true), $this->renderVars['view']);
 
 		if (CI_DEBUG && (! isset($options['debug']) || $options['debug'] === true))
 		{
-			$after = (new \Config\Filters())->globals['after'];
-			if (in_array('toolbar', $after) || array_key_exists('toolbar', $after))
+			$toolbarCollectors = config(\Config\Toolbar::class)->collectors;
+
+			if (in_array(\CodeIgniter\Debug\Toolbar\Collectors\Views::class, $toolbarCollectors))
 			{
-				$toolbarCollectors = (config(\Config\App::class))->toolbarCollectors;
-				if (in_array('CodeIgniter\Debug\Toolbar\Collectors\Views', $toolbarCollectors) || array_key_exists('CodeIgniter\Debug\Toolbar\Collectors\Views', $toolbarCollectors))
+				// Clean up our path names to make them a little cleaner
+				foreach (['APPPATH', 'SYSTEMPATH', 'ROOTPATH'] as $path)
 				{
-					// Clean up our path names to make them a little cleaner
-					foreach (['APPPATH', 'BASEPATH', 'ROOTPATH'] as $path)
+					if (strpos($this->renderVars['file'], constant($path)) === 0)
 					{
-						if (strpos($this->renderVars['file'], constant($path)) === 0)
-						{
-							$this->renderVars['file'] = str_replace(constant($path), $path . '/', $this->renderVars['file']);
-							break;
-						}
+						$this->renderVars['file'] = str_replace(constant($path), $path . '/', $this->renderVars['file']);
+						break;
 					}
-					$this->renderVars['file'] = ++$this->viewsCount . ' ' . $this->renderVars['file'];
-					$output                   = '<!-- DEBUG-VIEW START ' . $this->renderVars['file'] . ' -->' . PHP_EOL
-						. $output . PHP_EOL
-						. '<!-- DEBUG-VIEW ENDED ' . $this->renderVars['file'] . ' -->' . PHP_EOL;
 				}
+				$this->renderVars['file'] = ++$this->viewsCount . ' ' . $this->renderVars['file'];
+				$output                   = '<!-- DEBUG-VIEW START ' . $this->renderVars['file'] . ' -->' . PHP_EOL
+					. $output . PHP_EOL
+					. '<!-- DEBUG-VIEW ENDED ' . $this->renderVars['file'] . ' -->' . PHP_EOL;
 			}
 		}
 
@@ -264,7 +296,7 @@ class View implements RendererInterface
 	 *
 	 * @return string
 	 */
-	public function renderString(string $view, array $options = null, $saveData = null): string
+	public function renderString(string $view, array $options = null, bool $saveData = null): string
 	{
 		$start = microtime(true);
 		if (is_null($saveData))
@@ -358,7 +390,7 @@ class View implements RendererInterface
 	 *
 	 * @return RendererInterface
 	 */
-	public function resetData()
+	public function resetData(): RendererInterface
 	{
 		$this->data = [];
 
@@ -372,9 +404,101 @@ class View implements RendererInterface
 	 *
 	 * @return array
 	 */
-	public function getData()
+	public function getData(): array
 	{
 		return $this->data;
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * Specifies that the current view should extend an existing layout.
+	 *
+	 * @param string $layout
+	 *
+	 * @return void
+	 */
+	public function extend(string $layout)
+	{
+		$this->layout = $layout;
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * Starts holds content for a section within the layout.
+	 *
+	 * @param string $name
+	 */
+	public function section(string $name)
+	{
+		$this->currentSection = $name;
+
+		ob_start();
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
+	 *
+	 *
+	 * @throws \Zend\Escaper\Exception\RuntimeException
+	 */
+	public function endSection()
+	{
+		$contents = ob_get_clean();
+
+		if (empty($this->currentSection))
+		{
+			throw new \RuntimeException('View themes, no current section.');
+		}
+
+		// Ensure an array exists so we can store multiple entries for this.
+		if (! array_key_exists($this->currentSection, $this->sections))
+		{
+			$this->sections[$this->currentSection] = [];
+		}
+		$this->sections[$this->currentSection][] = $contents;
+
+		$this->currentSection = null;
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * Renders a section's contents.
+	 *
+	 * @param string $sectionName
+	 */
+	public function renderSection(string $sectionName)
+	{
+		if (! isset($this->sections[$sectionName]))
+		{
+			echo '';
+
+			return;
+		}
+
+		foreach ($this->sections[$sectionName] as $contents)
+		{
+			echo $contents;
+		}
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * Used within layout views to include additional views.
+	 *
+	 * @param string     $view
+	 * @param array|null $options
+	 * @param null       $saveData
+	 *
+	 * @return string
+	 */
+	public function include(string $view, array $options = null, $saveData = null): string
+	{
+		return $this->render($view, $options, $saveData);
 	}
 
 	//--------------------------------------------------------------------

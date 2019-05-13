@@ -2,6 +2,7 @@
 
 namespace CodeIgniter;
 
+use CodeIgniter\Exceptions\CastException;
 use CodeIgniter\I18n\Time;
 use CodeIgniter\Test\ReflectionHelper;
 use Tests\Support\SomeEntity;
@@ -69,6 +70,23 @@ class EntityTest extends \CIUnitTestCase
 		$this->assertEquals(123, $entity->foo);
 		$this->assertEquals('bar:234:bar', $entity->bar);
 		$this->assertObjectNotHasAttribute('baz', $entity);
+	}
+
+	/**
+	 * @see https://github.com/codeigniter4/CodeIgniter4/issues/1567
+	 */
+	public function testFillMapsEntities()
+	{
+		$entity = $this->getMappedEntity();
+
+		$data = [
+			'bar'  => 'foo',
+			'orig' => 'simple',
+		];
+		$entity->fill($data);
+
+		$this->assertEquals('foo', $entity->bar);
+		$this->assertEquals('oo:simple:oo', $entity->orig);
 	}
 
 	//--------------------------------------------------------------------
@@ -157,7 +175,7 @@ class EntityTest extends \CIUnitTestCase
 		$time = $entity->created_at;
 
 		$this->assertInstanceOf(Time::class, $time);
-		$this->assertEquals(date('Y-m-d H:i:s', $stamp), $time->format('Y-m-d H:i:s'));
+		$this->assertCloseEnoughString(date('Y-m-d H:i:s', $stamp), $time->format('Y-m-d H:i:s'));
 	}
 
 	public function testDateMutationFromDatetime()
@@ -169,7 +187,7 @@ class EntityTest extends \CIUnitTestCase
 		$time = $entity->created_at;
 
 		$this->assertInstanceOf(Time::class, $time);
-		$this->assertEquals($dt->format('Y-m-d H:i:s'), $time->format('Y-m-d H:i:s'));
+		$this->assertCloseEnoughString($dt->format('Y-m-d H:i:s'), $time->format('Y-m-d H:i:s'));
 	}
 
 	public function testDateMutationFromTime()
@@ -181,7 +199,7 @@ class EntityTest extends \CIUnitTestCase
 		$time = $entity->created_at;
 
 		$this->assertInstanceOf(Time::class, $time);
-		$this->assertEquals($dt->format('Y-m-d H:i:s'), $time->format('Y-m-d H:i:s'));
+		$this->assertCloseEnoughString($dt->format('Y-m-d H:i:s'), $time->format('Y-m-d H:i:s'));
 	}
 
 	public function testDateMutationStringToTime()
@@ -206,7 +224,7 @@ class EntityTest extends \CIUnitTestCase
 		$time = $this->getPrivateProperty($entity, 'created_at');
 
 		$this->assertInstanceOf(Time::class, $time);
-		$this->assertEquals(date('Y-m-d H:i:s'), $time->format('Y-m-d H:i:s'));
+		$this->assertCloseEnoughString(date('Y-m-d H:i:s'), $time->format('Y-m-d H:i:s'));
 	}
 
 	public function testDateMutationDatetimeToTime()
@@ -219,7 +237,7 @@ class EntityTest extends \CIUnitTestCase
 		$time = $this->getPrivateProperty($entity, 'created_at');
 
 		$this->assertInstanceOf(Time::class, $time);
-		$this->assertEquals($dt->format('Y-m-d H:i:s'), $time->format('Y-m-d H:i:s'));
+		$this->assertCloseEnoughString($dt->format('Y-m-d H:i:s'), $time->format('Y-m-d H:i:s'));
 	}
 
 	public function testDateMutationTimeToTime()
@@ -232,7 +250,7 @@ class EntityTest extends \CIUnitTestCase
 		$time = $this->getPrivateProperty($entity, 'created_at');
 
 		$this->assertInstanceOf(Time::class, $time);
-		$this->assertEquals($dt->format('Y-m-d H:i:s'), $time->format('Y-m-d H:i:s'));
+		$this->assertCloseEnoughString($dt->format('Y-m-d H:i:s'), $time->format('Y-m-d H:i:s'));
 	}
 
 	//--------------------------------------------------------------------
@@ -370,6 +388,18 @@ class EntityTest extends \CIUnitTestCase
 
 	//--------------------------------------------------------------------
 
+	public function testCastNullable()
+	{
+		$entity = $this->getCastNullableEntity();
+
+		$this->assertSame(null, $entity->string_null);
+		$this->assertSame('', $entity->string_empty);
+		$this->assertSame(null, $entity->integer_null);
+		$this->assertSame(0, $entity->integer_0);
+	}
+
+	//--------------------------------------------------------------------
+
 	public function testCastAsJSON()
 	{
 		$entity = $this->getCastEntity();
@@ -401,6 +431,93 @@ class EntityTest extends \CIUnitTestCase
 		$this->assertEquals($data, $entity->eleventh);
 	}
 
+	public function testCastAsJSONErrorDepth()
+	{
+		$entity = $this->getCastEntity();
+
+		// Create array with depth 513 to get depth error
+		$array = [];
+		$value = "test value";
+		$keys = rtrim(str_repeat('test.', 513), '.');
+		$keys = explode(".", $keys);
+		$current = &$array;
+		foreach ($keys as $key)
+		{
+			$current = &$current[$key];
+		}
+		$current = $value;
+
+		$this->expectException(CastException::class);
+		$this->expectExceptionMessage('Maximum stack depth exceeded');
+
+		$entity->tenth = $array;
+		$this->getPrivateProperty($entity, 'tenth');
+	}
+
+	public function testCastAsJSONErrorUTF8()
+	{
+		$entity = $this->getCastEntity();
+
+		$this->expectException(CastException::class);
+		$this->expectExceptionMessage('Malformed UTF-8 characters, possibly incorrectly encoded');
+
+		$entity->tenth = "\xB1\x31";
+		$this->getPrivateProperty($entity, 'tenth');
+	}
+
+	public function testCastAsJSONSyntaxError()
+	{
+		$entity = new Entity();
+
+		$method = $this->getPrivateMethodInvoker($entity,'castAsJson');
+		
+		$this->expectException(CastException::class);
+		$this->expectExceptionMessage('Syntax error, malformed JSON');
+
+		$method("{ this is bad string", true);
+	}
+	
+	public function testCastAsJSONAnotherErrorDepth()
+	{
+		$entity = new Entity();
+
+		$method = $this->getPrivateMethodInvoker($entity,'castAsJson');
+		
+		$this->expectException(CastException::class);
+		$this->expectExceptionMessage('Maximum stack depth exceeded');
+
+		$string = '{'.str_repeat('"test":{', 513).'"test":"value"'.str_repeat('}', 513).'}';
+		
+		$method($string, true);
+	}
+	
+	public function testCastAsJSONControlCharCheck()
+	{
+		$entity = new Entity();
+
+		$method = $this->getPrivateMethodInvoker($entity,'castAsJson');
+		
+		$this->expectException(CastException::class);
+		$this->expectExceptionMessage('Unexpected control character found');
+
+		$string = "{\n\t\"property1\": \"The quick brown fox\njumps over the lazy dog\",\n\t\"property2\":\"value2\"\n}";
+		
+		$method($string, true);
+	}
+	
+	public function testCastAsJSONStateMismatch()
+	{
+		$entity = new Entity();
+
+		$method = $this->getPrivateMethodInvoker($entity,'castAsJson');
+		
+		$this->expectException(CastException::class);
+		$this->expectExceptionMessage('Underflow or the modes mismatch');
+
+		$string = '[{"name":"jack","product_id":"1234"]';
+		
+		$method($string, true);
+	}
 	//--------------------------------------------------------------------
 
 	public function testAsArray()
@@ -428,6 +545,46 @@ class EntityTest extends \CIUnitTestCase
 			'simple' => ':oo',
 			'bar'    => null,
 			'orig'   => ':oo',
+		]);
+	}
+
+	public function testAsArrayOnlyChanged()
+	{
+		$entity = $this->getEntity();
+
+		$entity->bar = 'foo';
+
+		$result = $entity->toArray(true);
+
+		$this->assertEquals($result, [
+			'bar' => 'bar:foo:bar',
+		]);
+	}
+
+	public function testToRawArray()
+	{
+		$entity = $this->getEntity();
+
+		$result = $entity->toRawArray();
+
+		$this->assertEquals($result, [
+			'foo'        => null,
+			'bar'        => null,
+			'default'    => 'sumfin',
+			'created_at' => null,
+		]);
+	}
+
+	public function testToRawArrayOnlyChanged()
+	{
+		$entity = $this->getEntity();
+
+		$entity->bar = 'foo';
+
+		$result = $entity->toRawArray(true);
+
+		$this->assertEquals($result, [
+			'bar' => 'bar:foo',
 		]);
 	}
 
@@ -562,6 +719,29 @@ class EntityTest extends \CIUnitTestCase
 			{
 				$this->seventh = $seventh;
 			}
+		};
+	}
+
+	protected function getCastNullableEntity()
+	{
+		return new class extends Entity
+		{
+
+			protected $string_null  = null;
+			protected $string_empty = null;
+			protected $integer_null = null;
+			protected $integer_0    = null;
+			// 'bar' is db column, 'foo' is internal representation
+			protected $_options = [
+				'casts'   => [
+					'string_null'   => '?string',
+					'string_empty'  => 'string',
+					'integer_null' => '?integer',
+					'integer_0'     => 'integer',
+				],
+				'dates'   => [],
+				'datamap' => [],
+			];
 		};
 	}
 

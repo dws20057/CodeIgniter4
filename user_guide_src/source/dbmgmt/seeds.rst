@@ -10,10 +10,11 @@ event or setting information, and more.
 Database seeds are simple classes that must have a **run()** method, and extend **CodeIgniter\Database\Seeder**.
 Within the **run()** the class can create any form of data that it needs to. It has access to the database
 connection and the forge through ``$this->db`` and ``$this->forge``, respectively. Seed files must be
-stored within the **application/Database/Seeds** directory. The name of the file must match the name of the class.
+stored within the **app/Database/Seeds** directory. The name of the file must match the name of the class.
 ::
 
-	// application/Database/Seeds/SimpleSeeder.php
+        <?php namespace App\Database\Seeds;
+
 	class SimpleSeeder extends \CodeIgniter\Database\Seeder
 	{
 		public function run()
@@ -38,6 +39,8 @@ Nesting Seeders
 
 Seeders can call other seeders, with the **call()** method. This allows you to easily organize a central seeder,
 but organize the tasks into separate seeder files::
+
+        <?php namespace App\Database\Seeds;
 
 	class TestSeeder extends \CodeIgniter\Database\Seeder
 	{

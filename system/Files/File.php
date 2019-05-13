@@ -1,4 +1,4 @@
-<?php namespace CodeIgniter\Files;
+<?php
 
 /**
  * CodeIgniter
@@ -7,7 +7,7 @@
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,17 +29,24 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
+
+namespace CodeIgniter\Files;
 
 use SplFileInfo;
 use CodeIgniter\Files\Exceptions\FileException;
 use CodeIgniter\Files\Exceptions\FileNotFoundException;
 
+/**
+ * Wrapper for PHP's built-in SplFileInfo, with goodies.
+ *
+ * @package CodeIgniter\Files
+ */
 class File extends SplFileInfo
 {
 
@@ -127,17 +134,9 @@ class File extends SplFileInfo
 	 */
 	public function getMimeType(): string
 	{
-		if (function_exists('finfo_file'))
-		{
-			$finfo    = finfo_open(FILEINFO_MIME_TYPE);
-			$mimeType = finfo_file($finfo, $this->getRealPath());
-			finfo_close($finfo);
-		}
-		else
-		{
-			$mimeType = mime_content_type($this->getRealPath());
-		}
-
+		$finfo    = finfo_open(FILEINFO_MIME_TYPE);
+		$mimeType = finfo_file($finfo, $this->getRealPath());
+		finfo_close($finfo);
 		return $mimeType;
 	}
 
@@ -163,7 +162,7 @@ class File extends SplFileInfo
 	 * @param string|null $name
 	 * @param boolean     $overwrite
 	 *
-	 * @return boolean
+	 * @return \CodeIgniter\Files\File
 	 */
 	public function move(string $targetPath, string $name = null, bool $overwrite = false)
 	{
@@ -171,7 +170,9 @@ class File extends SplFileInfo
 		$name        = $name ?? $this->getBaseName();
 		$destination = $overwrite ? $targetPath . $name : $this->getDestination($targetPath . $name);
 
-		if (! @rename($this->getPath(), $destination))
+		$oldName = empty($this->getRealPath()) ? $this->getPath() : $this->getRealPath();
+
+		if (! @rename($oldName, $destination))
 		{
 			$error = error_get_last();
 			throw FileException::forUnableToMove($this->getBasename(), $targetPath, strip_tags($error['message']));
@@ -179,7 +180,7 @@ class File extends SplFileInfo
 
 		@chmod($targetPath, 0777 & ~umask());
 
-		return true;
+		return new File($destination);
 	}
 
 	//--------------------------------------------------------------------

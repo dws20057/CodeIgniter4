@@ -11,7 +11,7 @@ need to be run against the production machines next time you deploy.
 The database table **migration** tracks which migrations have already been
 run so all you have to do is update your application files and
 call ``$migration->current()`` to work out which migrations should be run.
-The current version is found in **application/Config/Migrations.php**.
+The current version is found in **app/Config/Migrations.php**.
 
 .. contents::
   :local:
@@ -36,7 +36,7 @@ method taken. Two numbering styles are available:
   the preferred scheme in CodeIgniter 3.0 and later.
 
 The desired style may be selected using the ``$type`` setting in your
-*application/Config/Migrations.php* file. The default setting is timestamp.
+*app/Config/Migrations.php* file. The default setting is timestamp.
 
 Regardless of which numbering style you choose to use, prefix your migration
 files with the migration number followed by an underscore and a descriptive
@@ -50,7 +50,7 @@ Create a Migration
 ******************
 
 This will be the first migration for a new site which has a blog. All
-migrations go in the **application/Database/Migrations/** directory and have names such
+migrations go in the **app/Database/Migrations/** directory and have names such
 as *20121031100537_Add_blog.php*.
 ::
 
@@ -86,7 +86,7 @@ as *20121031100537_Add_blog.php*.
 		}
 	}
 
-Then in **application/Config/Migrations.php** set ``$currentVersion = 20121031100537;``.
+Then in **app/Config/Migrations.php** set ``$currentVersion = 20121031100537;``.
 
 The database connection and the database Forge class are both available to you through
 ``$this->db`` and ``$this->forge``, respectively.
@@ -108,32 +108,35 @@ Database Groups
 ===============
 
 A migration will only be run against a single database group. If you have multiple groups defined in
-**application/Config/Database.php**, then it will run against the ``$defaultGroup`` as specified
+**app/Config/Database.php**, then it will run against the ``$defaultGroup`` as specified
 in that same configuration file. There may be times when you need different schemas for different
 database groups. Perhaps you have one database that is used for all general site information, while
 another database is used for mission critical data. You can ensure that migrations are run only
 against the proper group by setting the ``$DBGroup`` property on your migration. This name must
 match the name of the database group exactly::
 
-  class Migration_Add_blog extends \CodeIgniter\Database\Migration
-  {
-    protected $DBGroup = 'alternate_db_group';
+    <?php namespace App\Database\Migrations;
 
-    public function up() { . . . }
+    class Migration_Add_blog extends \CodeIgniter\Database\Migration
+    {
+        protected $DBGroup = 'alternate_db_group';
 
-    public function down() { . . . }
-  }
+        public function up() { . . . }
+
+        public function down() { . . . }
+    }
 
 Namespaces
 ==========
 
 The migration library can automatically scan all namespaces you have defined within
-**application/Config/Autoload.php** and its ``$psr4`` property for matching directory
-names. It will include all migrations it finds in Database/Migrations.
+**app/Config/Autoload.php** or loaded from an external source like Composer, using
+the ``$psr4`` property for matching directory names. It will include all migrations
+it finds in Database/Migrations.
 
 Each namespace has it's own version sequence, this will help you upgrade and downgrade each module (namespace) without affecting other namespaces.
 
-For example, assume that we have the the following namespaces defined in our Autoload
+For example, assume that we have the following namespaces defined in our Autoload
 configuration file::
 
 	$psr4 = [
@@ -149,10 +152,10 @@ re-usable, modular code suites.
 Usage Example
 *************
 
-In this example some simple code is placed in **application/Controllers/Migrate.php**
+In this example some simple code is placed in **app/Controllers/Migrate.php**
 to update the schema::
 
-	<?php
+        <?php namespace App\Controllers;
 
 	class Migrate extends \CodeIgniter\Controller
 	{
@@ -174,7 +177,7 @@ to update the schema::
 	}
 
 *******************
-Commnand-Line Tools
+Command-Line Tools
 *******************
 CodeIgniter ships with several :doc:`commands </cli/cli_commands>` that are available from the command line to help
 you work with migrations. These tools are not required to use migrations but might make things easier for those of you
@@ -184,7 +187,7 @@ that wish to use them. The tools primarily provide access to the same methods th
 
 Migrates all database groups to the latest available migrations::
 
-> php spark migrate:latest
+    > php spark migrate:latest
 
 You can use (latest) with the following options:
 
@@ -194,14 +197,14 @@ You can use (latest) with the following options:
 
 This example will migrate Blog namespace to latest::
 
-> php spark migrate:latest -g test -n Blog
+    > php spark migrate:latest -g test -n Blog
 
 **current**
 
 Migrates the (App) namespace to match the version set in ``$currentVersion``. This will migrate both
 up and down as needed to match the specified version::
 
-  > php spark migrate:current
+    > php spark migrate:current
 
 You can use (current) with the following options:
 
@@ -214,7 +217,7 @@ for the version. ::
 
   // Asks you for the version...
   > php spark migrate:version
-  > Version:
+  Version:
 
   // Sequential
   > php spark migrate:version 007
@@ -225,7 +228,7 @@ for the version. ::
 You can use (version) with the following options:
 
 - (-g) to chose database group, otherwise default database group will be used.
-- (-n) to choose namespace, , otherwise (App) namespace will be used.
+- (-n) to choose namespace, otherwise (App) namespace will be used.
 
 **rollback**
 
@@ -265,7 +268,7 @@ You can use (refresh) with the following options:
 
 **create**
 
-Creates a skeleton migration file in **application/Database/Migrations**.
+Creates a skeleton migration file in **app/Database/Migrations**.
 
 - When migration type is timestamp, using the YYYYMMDDHHIISS format::
 
@@ -283,12 +286,12 @@ You can use (create) with the following options:
 Migration Preferences
 *********************
 
-The following is a table of all the config options for migrations, available in **application/Config/Migrations.php**.
+The following is a table of all the config options for migrations, available in **app/Config/Migrations.php**.
 
 ========================== ====================== ========================== =============================================================
 Preference                 Default                Options                    Description
 ========================== ====================== ========================== =============================================================
-**enabled**                FALSE                  TRUE / FALSE               Enable or disable migrations.
+**enabled**                TRUE                   TRUE / FALSE               Enable or disable migrations.
 **path**                   'Database/Migrations/' None                       The path to your migrations folder.
 **currentVersion**         0                      None                       The current version your database should use.
 **table**                  migrations             None                       The table name for storing the schema version number.
@@ -308,7 +311,7 @@ Class Reference
 		:rtype:	mixed
 
 		Migrates up to the current version (whatever is set for
-		``$currentVersion`` in *application/Config/Migrations.php*).
+		``$currentVersion`` in *app/Config/Migrations.php*).
 
 	.. php:method:: findMigrations()
 
@@ -341,7 +344,7 @@ Class Reference
 		:param	mixed	$namespace: application namespace, if null (App) namespace will be used.
 		:param	mixed	$group: database group name, if null default database group will be used.
 		:param	mixed	$target_version: Migration version to process
-		:returns:	TRUE if no migrations are found, current version string on success, FALSE on failure
+		:returns:	Current version string on success, FALSE on failure or no migrations are found
 		:rtype:	mixed
 
 		Version can be used to roll back changes or step forwards programmatically to

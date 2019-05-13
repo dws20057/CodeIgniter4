@@ -1,5 +1,4 @@
-<?php namespace CodeIgniter\Test;
-
+<?php
 /**
  * CodeIgniter
  *
@@ -7,7 +6,7 @@
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,13 +28,17 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
+namespace CodeIgniter\Test;
+
+use Config\Database;
+use Config\Migrations;
 use Config\Services;
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\MigrationRunner;
@@ -118,18 +121,21 @@ class CIDatabaseTestCase extends CIUnitTestCase
 
 	//--------------------------------------------------------------------
 
+	/**
+	 * Load any database test dependencies.
+	 */
 	public function loadDependencies()
 	{
 		if ($this->db === null)
 		{
-			$this->db = \Config\Database::connect($this->DBGroup);
+			$this->db = Database::connect($this->DBGroup);
 			$this->db->initialize();
 		}
 
 		if ($this->migrations === null)
 		{
 			// Ensure that we can run migrations
-			$config          = new \Config\Migrations();
+			$config          = new Migrations();
 			$config->enabled = true;
 
 			$this->migrations = Services::migrations($config, $this->db);
@@ -138,7 +144,7 @@ class CIDatabaseTestCase extends CIUnitTestCase
 
 		if ($this->seeder === null)
 		{
-			$this->seeder = \Config\Database::seeder($this->DBGroup);
+			$this->seeder = Database::seeder($this->DBGroup);
 			$this->seeder->setSilent(true);
 		}
 	}
@@ -151,7 +157,7 @@ class CIDatabaseTestCase extends CIUnitTestCase
 	 *
 	 * @throws ConfigException
 	 */
-	public function setUp()
+	protected function setUp()
 	{
 		parent::setUp();
 
@@ -169,7 +175,7 @@ class CIDatabaseTestCase extends CIUnitTestCase
 
 			if (is_array($tables))
 			{
-				$forge = \Config\Database::forge('tests');
+				$forge = Database::forge('tests');
 
 				foreach ($tables as $table)
 				{

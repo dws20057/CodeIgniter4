@@ -1,6 +1,5 @@
 <?php
 
-namespace CodeIgniter\Honeypot;
 
 /**
  * CodeIgniter
@@ -9,7 +8,7 @@ namespace CodeIgniter\Honeypot;
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,28 +30,41 @@ namespace CodeIgniter\Honeypot;
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
+
+namespace CodeIgniter\Honeypot;
 
 use CodeIgniter\Config\BaseConfig;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use CodeIgniter\Honeypot\Exceptions\HoneypotException;
 
+/**
+ * class Honeypot
+ */
 class Honeypot
 {
 
 	/**
+	 * Our configuration.
+	 *
 	 * @var BaseConfig
 	 */
 	protected $config;
 
 	//--------------------------------------------------------------------
 
+	/**
+	 * Constructor.
+	 *
+	 * @param  BaseConfig $config
+	 * @throws type
+	 */
 	function __construct(BaseConfig $config)
 	{
 		$this->config = $config;
@@ -106,7 +118,7 @@ class Honeypot
 	 * @param  string $template
 	 * @return string
 	 */
-	protected function prepareTemplate($template): string
+	protected function prepareTemplate(string $template): string
 	{
 		$template = str_ireplace('{label}', $this->config->label, $template);
 		$template = str_ireplace('{name}', $this->config->name, $template);

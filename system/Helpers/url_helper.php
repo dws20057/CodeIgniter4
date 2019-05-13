@@ -6,7 +6,7 @@
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -28,11 +28,17 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT    MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
+ */
+
+/**
+ * CodeIgniter URL Helpers
+ *
+ * @package CodeIgniter
  */
 
 if (! function_exists('site_url'))
@@ -40,41 +46,41 @@ if (! function_exists('site_url'))
 	/**
 	 * Return a site URL to use in views
 	 *
-	 * @param string|array     $path
-	 * @param string|null      $scheme
+	 * @param mixed            $uri       URI string or array of URI segments
+	 * @param string|null      $protocol
 	 * @param \Config\App|null $altConfig Alternate configuration to use
 	 *
 	 * @return string
 	 */
-	function site_url($path = '', string $scheme = null, \Config\App $altConfig = null): string
+	function site_url($uri = '', string $protocol = null, \Config\App $altConfig = null): string
 	{
 		// convert segment array to string
-		if (is_array($path))
+		if (is_array($uri))
 		{
-			$path = implode('/', $path);
+			$uri = implode('/', $uri);
 		}
 
 		// use alternate config if provided, else default one
-		$config = empty($altConfig) ? config(\Config\App::class) : $altConfig;
+		$config = $altConfig ?? config(\Config\App::class);
 
-		$base = base_url();
+		$fullPath = rtrim(base_url(), '/') . '/';
 
 		// Add index page, if so configured
 		if (! empty($config->indexPage))
 		{
-			$path = rtrim($base, '/') . '/' . rtrim($config->indexPage, '/') . '/' . $path;
+			$fullPath .= rtrim($config->indexPage, '/');
 		}
-		else
+		if (! empty($uri))
 		{
-			$path = rtrim($base, '/') . '/' . $path;
+			$fullPath .= '/' . $uri;
 		}
 
-		$url = new \CodeIgniter\HTTP\URI($path);
+		$url = new \CodeIgniter\HTTP\URI($fullPath);
 
 		// allow the scheme to be over-ridden; else, use default
-		if (! empty($scheme))
+		if (! empty($protocol))
 		{
-			$url->setScheme($scheme);
+			$url->setScheme($protocol);
 		}
 
 		return (string) $url;
@@ -88,16 +94,16 @@ if (! function_exists('base_url'))
 	/**
 	 * Return the base URL to use in views
 	 *
-	 * @param  string|array $path
-	 * @param  string       $scheme
+	 * @param  mixed  $uri      URI string or array of URI segments
+	 * @param  string $protocol
 	 * @return string
 	 */
-	function base_url($path = '', string $scheme = null): string
+	function base_url($uri = '', string $protocol = null): string
 	{
 		// convert segment array to string
-		if (is_array($path))
+		if (is_array($uri))
 		{
-			$path = implode('/', $path);
+			$uri = implode('/', $uri);
 		}
 
 		// We should be using the configured baseURL that the user set;
@@ -108,21 +114,21 @@ if (! function_exists('base_url'))
 		unset($config);
 
 		// Merge in the path set by the user, if any
-		if (! empty($path))
+		if (! empty($uri))
 		{
-			$url = $url->resolveRelativeURI($path);
+			$url = $url->resolveRelativeURI($uri);
 		}
 
 		// If the scheme wasn't provided, check to
 		// see if it was a secure request
-		if (empty($scheme) && \CodeIgniter\Config\Services::request()->isSecure())
+		if (empty($protocol) && \CodeIgniter\Config\Services::request()->isSecure())
 		{
-			$scheme = 'https';
+			$protocol = 'https';
 		}
 
-		if (! empty($scheme))
+		if (! empty($protocol))
 		{
-			$url->setScheme($scheme);
+			$url->setScheme($protocol);
 		}
 
 		return (string) $url;
@@ -145,7 +151,7 @@ if (! function_exists('current_url'))
 	 */
 	function current_url(bool $returnObject = false)
 	{
-		return $returnObject === true ? \CodeIgniter\Config\Services::request()->uri : (string) \CodeIgniter\Config\Services::request()->uri;
+		return $returnObject ? \CodeIgniter\Config\Services::request()->uri : (string) \CodeIgniter\Config\Services::request()->uri;
 	}
 }
 
@@ -170,7 +176,7 @@ if (! function_exists('previous_url'))
 		// Otherwise, grab a sanitized version from $_SERVER.
 		$referer = $_SESSION['_ci_previous_url'] ?? \CodeIgniter\Config\Services::request()->getServer('HTTP_REFERER', FILTER_SANITIZE_URL);
 
-		$referer = empty($referer) ? site_url('/') : $referer;
+		$referer = $referer ?? site_url('/');
 
 		return $returnObject ? new \CodeIgniter\HTTP\URI($referer) : $referer;
 	}
@@ -208,7 +214,7 @@ if (! function_exists('index_page'))
 	function index_page(\Config\App $altConfig = null): string
 	{
 		// use alternate config if provided, else default one
-		$config = empty($altConfig) ? config(\Config\App::class) : $altConfig;
+		$config = $altConfig ?? config(\Config\App::class);
 
 		return $config->indexPage;
 	}
@@ -223,7 +229,7 @@ if (! function_exists('anchor'))
 	 *
 	 * Creates an anchor based on the local URL.
 	 *
-	 * @param string           $uri        The URL
+	 * @param mixed            $uri        URI string or array of URI segments
 	 * @param string           $title      The link title
 	 * @param mixed            $attributes Any attributes
 	 * @param \Config\App|null $altConfig  Alternate configuration to use
@@ -233,7 +239,7 @@ if (! function_exists('anchor'))
 	function anchor($uri = '', string $title = '', $attributes = '', \Config\App $altConfig = null): string
 	{
 		// use alternate config if provided, else default one
-		$config = empty($altConfig) ? config(\Config\App::class) : $altConfig;
+		$config = $altConfig ?? config(\Config\App::class);
 
 		$site_url = is_array($uri) ? site_url($uri, null, $config) : (preg_match('#^(\w+:)?//#i', $uri) ? $uri : site_url($uri, null, $config));
 		// eliminate trailing slash
@@ -273,7 +279,7 @@ if (! function_exists('anchor_popup'))
 	function anchor_popup($uri = '', string $title = '', $attributes = false, \Config\App $altConfig = null): string
 	{
 		// use alternate config if provided, else default one
-		$config = empty($altConfig) ? config(\Config\App::class) : $altConfig;
+		$config = $altConfig ?? config(\Config\App::class);
 
 		$site_url = preg_match('#^(\w+:)?//#i', $uri) ? $uri : site_url($uri, '', $config);
 		$site_url = rtrim($site_url, '/');
@@ -332,9 +338,9 @@ if (! function_exists('mailto'))
 	 *
 	 * @return string
 	 */
-	function mailto($email, string $title = '', $attributes = ''): string
+	function mailto(string $email, string $title = '', $attributes = ''): string
 	{
-		if ($title === '')
+		if (trim($title) === '')
 		{
 			$title = $email;
 		}
@@ -358,9 +364,9 @@ if (! function_exists('safe_mailto'))
 	 *
 	 * @return string
 	 */
-	function safe_mailto($email, string $title = '', $attributes = ''): string
+	function safe_mailto(string $email, string $title = '', $attributes = ''): string
 	{
-		if ($title === '')
+		if (trim($title) === '')
 		{
 			$title = $email;
 		}
@@ -470,7 +476,7 @@ if (! function_exists('auto_link'))
 	 *
 	 * @return string
 	 */
-	function auto_link($str, $type = 'both', $popup = false): string
+	function auto_link(string $str, string $type = 'both', bool $popup = false): string
 	{
 		// Find and replace any URLs.
 		if ($type !== 'email' && preg_match_all('#(\w*://|www\.)[^\s()<>;]+\w#i', $str, $matches, PREG_OFFSET_CAPTURE | PREG_SET_ORDER))
@@ -519,10 +525,10 @@ if (! function_exists('prep_url'))
 	 * Formerly used URI, but that does not play nicely with URIs missing
 	 * the scheme.
 	 *
-	 * @param  string    the URL
+	 * @param  string $str the URL
 	 * @return string
 	 */
-	function prep_url($str = ''): string
+	function prep_url(string $str = ''): string
 	{
 		if ($str === 'http://' || $str === '')
 		{
@@ -556,7 +562,7 @@ if (! function_exists('url_title'))
 	 * @param  boolean $lowercase Whether to transform the output string to lowercase
 	 * @return string
 	 */
-	function url_title($str, $separator = '-', $lowercase = false): string
+	function url_title(string $str, string $separator = '-', bool $lowercase = false): string
 	{
 		$q_separator = preg_quote($separator, '#');
 

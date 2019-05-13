@@ -1,4 +1,4 @@
-<?php namespace CodeIgniter\Log\Handlers;
+<?php
 
 /**
  * CodeIgniter
@@ -7,7 +7,7 @@
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,12 +29,14 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
+
+namespace CodeIgniter\Log\Handlers;
 
 /**
  * Log error messages to file system
@@ -94,6 +96,7 @@ class FileHandler extends BaseHandler implements HandlerInterface
 	 * @param $message
 	 *
 	 * @return boolean
+	 * @throws \Exception
 	 */
 	public function handle($level, $message): bool
 	{
@@ -108,7 +111,7 @@ class FileHandler extends BaseHandler implements HandlerInterface
 			// Only add protection to php files
 			if ($this->fileExtension === 'php')
 			{
-				$msg .= "<?php defined('BASEPATH') || exit('No direct script access allowed'); ?>\n\n";
+				$msg .= "<?php defined('SYSTEMPATH') || exit('No direct script access allowed'); ?>\n\n";
 			}
 		}
 
@@ -138,7 +141,10 @@ class FileHandler extends BaseHandler implements HandlerInterface
 		{
 			if (($result = fwrite($fp, substr($msg, $written))) === false)
 			{
+				// if we get this far, we'll never see this during travis-ci
+				// @codeCoverageIgnoreStart
 				break;
+				// @codeCoverageIgnoreEnd
 			}
 		}
 

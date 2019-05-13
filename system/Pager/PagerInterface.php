@@ -1,4 +1,4 @@
-<?php namespace CodeIgniter\Pager;
+<?php
 
 /**
  * CodeIgniter
@@ -7,7 +7,7 @@
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,13 +29,18 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
+namespace CodeIgniter\Pager;
+
+/**
+ * Expected behavior for a Pager
+ */
 interface PagerInterface
 {
 
@@ -96,8 +101,8 @@ interface PagerInterface
 	/**
 	 * Sets the path that an aliased group of links will use.
 	 *
-	 * @param string $group
 	 * @param string $path
+	 * @param string $group
 	 *
 	 * @return mixed
 	 */
@@ -128,6 +133,19 @@ interface PagerInterface
 	//--------------------------------------------------------------------
 
 	/**
+	 * Returns the URI for a specific page for the specified group.
+	 *
+	 * @param integer|null $page
+	 * @param string       $group
+	 * @param boolean      $returnObject
+	 *
+	 * @return string|\CodeIgniter\HTTP\URI
+	 */
+	public function getPageURI(int $page = null, string $group = 'default', bool $returnObject = false);
+
+	//--------------------------------------------------------------------
+
+	/**
 	 * Tells whether this group of results has any more pages of results.
 	 *
 	 * @param string|null $group
@@ -135,6 +153,17 @@ interface PagerInterface
 	 * @return boolean
 	 */
 	public function hasMore(string $group = 'default'): bool;
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * Returns the first page.
+	 *
+	 * @param string $group
+	 *
+	 * @return integer
+	 */
+	public function getFirstPage(string $group = 'default');
 
 	//--------------------------------------------------------------------
 

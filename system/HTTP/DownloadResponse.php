@@ -1,4 +1,4 @@
-<?php namespace CodeIgniter\HTTP;
+<?php
 
 /**
  * CodeIgniter
@@ -7,7 +7,7 @@
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,17 +29,22 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
  * @since      Version 4.0.0
  * @filesource
  */
 
+namespace CodeIgniter\HTTP;
+
 use CodeIgniter\Exceptions\DownloadException;
 use CodeIgniter\Files\File;
 use Config\Mimes;
 
+/**
+ * HTTP response when a download is requested.
+ */
 class DownloadResponse extends Message implements ResponseInterface
 {
 	/**
@@ -91,6 +96,12 @@ class DownloadResponse extends Message implements ResponseInterface
 	 */
 	private $pretend = false;
 
+	/**
+	 * Constructor.
+	 *
+	 * @param string  $filename
+	 * @param boolean $setMime
+	 */
 	public function __construct(string $filename, bool $setMime)
 	{
 		$this->filename = $filename;
@@ -147,9 +158,7 @@ class DownloadResponse extends Message implements ResponseInterface
 	}
 
 	/**
-	 * get mimetype
-	 *
-	 * @return string
+	 * Set content type by guessing mime type from file extension
 	 */
 	private function setContentTypeByMimeType()
 	{
@@ -204,11 +213,11 @@ class DownloadResponse extends Message implements ResponseInterface
 	}
 
 	/**
-	 * get Content-Disponsition Header string.
+	 * get Content-Disposition Header string.
 	 *
 	 * @return string
 	 */
-	private function getContentDisponsition() : string
+	private function getContentDisposition() : string
 	{
 		$download_filename = $this->getDownloadFileName();
 
@@ -348,6 +357,12 @@ class DownloadResponse extends Message implements ResponseInterface
 	// Output Methods
 	//--------------------------------------------------------------------
 
+	/**
+	 * For unit testing, don't actually send headers.
+	 *
+	 * @param  boolean $pretend
+	 * @return $this
+	 */
 	public function pretend(bool $pretend = true)
 	{
 		$this->pretend = $pretend;
@@ -377,7 +392,7 @@ class DownloadResponse extends Message implements ResponseInterface
 			$this->setContentTypeByMimeType();
 		}
 
-		$this->setHeader('Content-Disposition', $this->getContentDisponsition());
+		$this->setHeader('Content-Disposition', $this->getContentDisposition());
 		$this->setHeader('Expires-Disposition', '0');
 		$this->setHeader('Content-Transfer-Encoding', 'binary');
 		$this->setHeader('Content-Length', (string)$this->getContentLength());
@@ -399,7 +414,7 @@ class DownloadResponse extends Message implements ResponseInterface
 
 		// Per spec, MUST be sent with each request, if possible.
 		// http://www.w3.org/Protocols/rfc2616/rfc2616-sec13.html
-		if (isset($this->headers['Date']))
+		if (! isset($this->headers['Date']))
 		{
 			$this->setDate(\DateTime::createFromFormat('U', time()));
 		}

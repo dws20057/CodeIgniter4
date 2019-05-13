@@ -19,7 +19,7 @@ extends `CIDatabaseTestCase </testing/database>`_ you must always ensure that ``
 are called before you take your actions.
 ::
 
-    <?php
+    <?php namespace App;
 
     use CodeIgniter\Test\FeatureTestCase;
 
@@ -42,7 +42,7 @@ Requesting A Page
 Essentially, the FeatureTestCase simply allows you to call an endpoint on your application and get the results back.
 to do this, you use the ``call()`` method. The first parameter is the HTTP method to use (most frequently either GET or POST).
 The second parameter is the path on your site to test. The third parameter accepts an array that is used to populate the
-the superglobal variables for the HTTP verb you are using. So, a method of **GET** would have the **$_GET** variable
+superglobal variables for the HTTP verb you are using. So, a method of **GET** would have the **$_GET** variable
 populated, while a **post** request would have the **$_POST** array populated.
 ::
 
@@ -69,15 +69,19 @@ Shorthand methods for each of the HTTP verbs exist to ease typing and make thing
 Setting Different Routes
 ------------------------
 
-You can use a custom collection of routes by passing an array of routes into the ``withRoutes()`` method. This will
+You can use a custom collection of routes by passing an array of "routes" into the ``withRoutes()`` method. This will
 override any existing routes in the system::
 
     $routes = [
-        'users' => 'UserController::list'
-    ];
+       [ 'get', 'users', 'UserController::list' ]
+     ];
 
     $result = $this->withRoutes($routes)
         ->get('users');
+
+Each of the "routes" is a 3 element array containing the HTTP verb (or "add" for all),
+the URI to match, and the routing destination.
+
 
 Setting Session Values
 ----------------------
@@ -118,7 +122,7 @@ Checking Response Status
 
 **isOK()**
 
-Returns a boolean true/false based on whether the response is percieved to be "ok". This is primarily determined by
+Returns a boolean true/false based on whether the response is perceived to be "ok". This is primarily determined by
 a response status code in the 200 or 300's.
 ::
 
@@ -328,7 +332,7 @@ Asserts that $fragment is found within the JSON response. It does not need to ma
     // Is true
     $this->assertJSONFragment(['config' => ['key-a']);
 
-.. note:: This simply uses phpUnit's own `assertArraySubset() <https://phpunit.readthedocs.io/en/7.1/assertions.html#assertarraysubset>`_
+.. note:: This simply uses phpUnit's own `assertArraySubset() <https://phpunit.readthedocs.io/en/7.2/assertions.html#assertarraysubset>`_
     method to do the comparison.
 
 **assertJSONExact($test)**

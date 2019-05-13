@@ -27,14 +27,14 @@ above it instead has a product ID. To overcome this, CodeIgniter allows you to r
 Setting your own routing rules
 ==============================
 
-Routing rules are defined in the **application/config/Routes.php** file. In it you'll see that
+Routing rules are defined in the **app/config/Routes.php** file. In it you'll see that
 it creates an instance of the RouteCollection class that permits you to specify your own routing criteria.
 Routes can be specified using placeholders or Regular Expressions.
 
 A route simply takes the URI on the left, and maps it to the controller and method on the right,
 along with any parameters that should be passed to the controller. The controller and method should
 be listed in the same way that you would use a static method, by separating the fully-namespaced class
-and its method with a double-colon, like ``Users::list``.  If that method requires parameters to be
+and its method with a double-colon, like ``Users::list``. If that method requires parameters to be
 passed to it, then they would be listed after the method name, separated by forward-slashes::
 
 	// Calls the $Users->list()
@@ -97,7 +97,7 @@ and the “productLookupByID” method passing in the match as a variable to the
 
 .. important:: While the ``add()`` method is convenient, it is recommended to always use the HTTP-verb-based
     routes, described below, as it is more secure. It will also provide a slight performance increase, since
-    only routes that match the current request method are stored, resulting in less routes to scan through
+    only routes that match the current request method are stored, resulting in fewer routes to scan through
     when trying to find a match.
 
 Custom Placeholders
@@ -221,7 +221,7 @@ If you need to assign options to a group, like a `namespace <#assigning-namespac
 
 This would handle a resource route to the ``App\API\v1\Users`` controller with the ``/api/users`` URI.
 
-You can also use ensure that a specific `filter </incoming/filters.html>`_ gets ran for a group of routes. This will always
+You can also use ensure that a specific `filter </incoming/filters.html>`_ runs for a group of routes. This will always
 run the filter before or after the controller. This is especially handy during authentication or api logging::
 
     $routes->group('api', ['filter' => 'api-auth'], function($routes)
@@ -229,12 +229,12 @@ run the filter before or after the controller. This is especially handy during a
         $routes->resource('users');
     });
 
-The value for the filter must match one of the aliases defined within ``application/Config/Filters.php``.
+The value for the filter must match one of the aliases defined within ``app/Config/Filters.php``.
 
 Environment Restrictions
 ========================
 
-You can create a set of routes that will only be viewable under a certain environment. This allows you to create
+You can create a set of routes that will only be viewable in a certain environment. This allows you to create
 tools that only the developer can use on their local machines that are not reachable on testing or production servers.
 This can be done with the ``environment()`` method. The first parameter is the name of the environment. Any
 routes defined within this closure are only accessible from the given environment::
@@ -326,7 +326,7 @@ name::
     $routes->put('photos/(:segment)',      'Photos::update/$1');
     $routes->delete('photos/(:segment)',   'Photos::delete/$1');
 
-.. important:: The routes are matched in the order they are specified, so if you have a resource photos above a get 'photos/poll' the show action's route for the resource line will be matched before the get line. To fix this, move the get line above the resource line so that it is matched first.
+.. important:: The routes are matched in the order they are specified, so if you have resource photos above a get 'photos/poll' the show action's route for the resource line will be matched before the get line. To fix this, move the get line above the resource line so that it is matched first.
 
 The second parameter accepts an array of options that can be used to modify the routes that are generated. While these
 routes are geared toward API-usage, where more methods are allowed, you can pass in the 'websafe' option to have it
@@ -393,6 +393,19 @@ can modify the generated routes, or further restrict them. The ``$options`` arra
 	$routes->map($array, $options);
 	$routes->group('name', $options, function());
 
+Applying Filters
+----------------
+
+You can alter the behavior of specific routes by supplying a filter to run before or after the controller. This is especially handy during authentication or api logging::
+
+    $routes->add('admin',' AdminController::index', ['filter' => 'admin-auth']);
+
+The value for the filter must match one of the aliases defined within ``app/Config/Filters.php``. You may also supply parameters to be passed to the filter's ``before()`` and ``after()`` methods::
+
+    $routes->add('users/delete/(:segment)', 'AdminController::index', ['filter' => 'admin-auth:dual,noreturn']);
+
+See `Controller filters </incoming/filters.html>`_ for more information on setting up filters.
+
 Assigning Namespace
 -------------------
 
@@ -455,7 +468,7 @@ Routes Configuration Options
 ============================
 
 The RoutesCollection class provides several options that affect all routes, and can be modified to meet your
-application's needs. These options are available at the top of `/application/Config/Routes.php`.
+application's needs. These options are available at the top of `/app/Config/Routes.php`.
 
 Default Namespace
 -----------------
@@ -488,14 +501,14 @@ Default Controller
 
 When a user visits the root of your site (i.e. example.com) the controller to use is determined by the value set by
 the ``setDefaultController()`` method, unless a route exists for it explicitly. The default value for this is ``Home``
-which matches the controller at ``/application/Controllers/Home.php``::
+which matches the controller at ``/app/Controllers/Home.php``::
 
-	// example.com routes to application/Controllers/Welcome.php
+	// example.com routes to app/Controllers/Welcome.php
 	$routes->setDefaultController('Welcome');
 
 The default controller is also used when no matching route has been found, and the URI would point to a directory
 in the controllers directory. For example, if the user visits ``example.com/admin``, if a controller was found at
-``/application/Controllers/admin/Home.php`` it would be used.
+``/app/Controllers/admin/Home.php`` it would be used.
 
 Default Method
 --------------
@@ -513,7 +526,7 @@ Translate URI Dashes
 --------------------
 
 This option enables you to automatically replace dashes (‘-‘) with underscores in the controller and method
-URI segments, thus saving you additional route entries if you need to do that. This is required, because the
+URI segments, thus saving you additional route entries if you need to do that. This is required because the
 dash isn’t a valid class or method name character and would cause a fatal error if you try to use it::
 
 	$routes->setTranslateURIDashes(true);

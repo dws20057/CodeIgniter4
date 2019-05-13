@@ -7,7 +7,7 @@
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,16 +29,25 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT  MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
+use CodeIgniter\Config\Config;
+use CodeIgniter\Files\Exceptions\FileNotFoundException;
+use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
+use CodeIgniter\HTTP\URI;
+use Config\App;
+use Config\Database;
+use Config\Logger;
 use Config\Services;
+use Tests\Support\Log\TestLogger;
+use Zend\Escaper\Escaper;
 
 /**
  * Common Functions
@@ -69,7 +78,7 @@ if (! function_exists('cache'))
 	 */
 	function cache(string $key = null)
 	{
-		$cache = \Config\Services::cache();
+		$cache = Services::cache();
 
 		// No params - return cache object
 		if (is_null($key))
@@ -96,7 +105,36 @@ if (! function_exists('config'))
 	 */
 	function config(string $name, bool $getShared = true)
 	{
-		return \CodeIgniter\Config\Config::get($name, $getShared);
+		return Config::get($name, $getShared);
+	}
+}
+
+//--------------------------------------------------------------------
+
+if (! function_exists('db_connnect'))
+{
+	/**
+	 * Grabs a database connection and returns it to the user.
+	 *
+	 * This is a convenience wrapper for \Config\Database::connect()
+	 * and supports the same parameters. Namely:
+	 *
+	 * When passing in $db, you may pass any of the following to connect:
+	 * - group name
+	 * - existing connection instance
+	 * - array of database configuration values
+	 *
+	 * If $getShared === false then a new connection instance will be provided,
+	 * otherwise it will all calls will return the same instance.
+	 *
+	 * @param \CodeIgniter\Database\ConnectionInterface|array|string $db
+	 * @param boolean                                                $getShared
+	 *
+	 * @return \CodeIgniter\Database\BaseConnection
+	 */
+	function db_connect($db = null, bool $getShared = true)
+	{
+		return Database::connect($db, $getShared);
 	}
 }
 
@@ -119,7 +157,7 @@ if (! function_exists('view'))
 	 *
 	 * @return string
 	 */
-	function view(string $name, array $data = [], array $options = [])
+	function view(string $name, array $data = [], array $options = []): string
 	{
 		/**
 		 * @var CodeIgniter\View\View $renderer
@@ -152,8 +190,9 @@ if (! function_exists('view_cell'))
 	 * @param string|null $cacheName
 	 *
 	 * @return string
+	 * @throws \ReflectionException
 	 */
-	function view_cell(string $library, $params = null, int $ttl = 0, string $cacheName = null)
+	function view_cell(string $library, $params = null, int $ttl = 0, string $cacheName = null): string
 	{
 		return Services::viewcell()
 						->render($library, $params, $ttl, $cacheName);
@@ -199,7 +238,7 @@ if (! function_exists('env'))
 			case 'empty':
 				return '';
 			case 'null':
-				return;
+				return null;
 		}
 
 		return $value;
@@ -225,8 +264,9 @@ if (! function_exists('esc'))
 	 * @param string       $encoding
 	 *
 	 * @return string|array
+	 * @throws \InvalidArgumentException
 	 */
-	function esc($data, $context = 'html', $encoding = null)
+	function esc($data, string $context = 'html', string $encoding = null)
 	{
 		if (is_array($data))
 		{
@@ -250,7 +290,7 @@ if (! function_exists('esc'))
 
 			if (! in_array($context, ['html', 'js', 'css', 'url', 'attr']))
 			{
-				throw new \InvalidArgumentException('Invalid escape context provided.');
+				throw new InvalidArgumentException('Invalid escape context provided.');
 			}
 
 			if ($context === 'attr')
@@ -265,12 +305,12 @@ if (! function_exists('esc'))
 			static $escaper;
 			if (! $escaper)
 			{
-				$escaper = new \Zend\Escaper\Escaper($encoding);
+				$escaper = new Escaper($encoding);
 			}
 
 			if ($encoding && $escaper->getEncoding() !== $encoding)
 			{
-				$escaper = new \Zend\Escaper\Escaper($encoding);
+				$escaper = new Escaper($encoding);
 			}
 
 			$data = $escaper->$method($data);
@@ -296,9 +336,9 @@ if (! function_exists('session'))
 	 *
 	 * @return \CodeIgniter\Session\Session|mixed|null
 	 */
-	function session($val = null)
+	function session(string $val = null)
 	{
-		$session = \Config\Services::session();
+		$session = Services::session();
 
 		// Returning a single item?
 		if (is_string($val))
@@ -325,7 +365,7 @@ if (! function_exists('timer'))
 	 */
 	function timer(string $name = null)
 	{
-		$timer = \Config\Services::timer();
+		$timer = Services::timer();
 
 		if (empty($name))
 		{
@@ -402,7 +442,7 @@ if (! function_exists('lang'))
 	 *
 	 * @return string
 	 */
-	function lang(string $line, array $args = [], string $locale = null)
+	function lang(string $line, array $args = [], string $locale = null): string
 	{
 		return Services::language($locale)
 						->getLine($line, $args);
@@ -440,7 +480,7 @@ if (! function_exists('log_message'))
 		// for asserting that logs were called in the test code.
 		if (ENVIRONMENT === 'testing')
 		{
-			$logger = new \Tests\Support\Log\TestLogger(new \Config\Logger());
+			$logger = new TestLogger(new Logger());
 
 			return $logger->log($level, $message, $context);
 		}
@@ -463,7 +503,7 @@ if (! function_exists('is_cli'))
 	 *
 	 * @return boolean
 	 */
-	function is_cli()
+	function is_cli(): bool
 	{
 		return (PHP_SAPI === 'cli' || defined('STDIN'));
 	}
@@ -486,11 +526,9 @@ if (! function_exists('route_to'))
 	 *
 	 * @return false|string
 	 */
-	function route_to(string $method, ...$params): string
+	function route_to(string $method, ...$params)
 	{
-		$routes = Services::routes();
-
-		return $routes->reverseRoute($method, ...$params);
+		return Services::routes()->reverseRoute($method, ...$params);
 	}
 }
 
@@ -505,27 +543,27 @@ if (! function_exists('remove_invisible_characters'))
 	 * between ascii characters, like Java\0script.
 	 *
 	 * @param string  $str
-	 * @param boolean $url_encoded
+	 * @param boolean $urlEncoded
 	 *
 	 * @return string
 	 */
-	function remove_invisible_characters($str, $url_encoded = true)
+	function remove_invisible_characters(string $str, bool $urlEncoded = true): string
 	{
-		$non_displayables = [];
+		$nonDisplayables = [];
 
 		// every control character except newline (dec 10),
 		// carriage return (dec 13) and horizontal tab (dec 09)
-		if ($url_encoded)
+		if ($urlEncoded)
 		{
-			$non_displayables[] = '/%0[0-8bcef]/';  // url encoded 00-08, 11, 12, 14, 15
-			$non_displayables[] = '/%1[0-9a-f]/';   // url encoded 16-31
+			$nonDisplayables[] = '/%0[0-8bcef]/';  // url encoded 00-08, 11, 12, 14, 15
+			$nonDisplayables[] = '/%1[0-9a-f]/';   // url encoded 16-31
 		}
 
-		$non_displayables[] = '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]+/S';   // 00-08, 11, 12, 14-31, 127
+		$nonDisplayables[] = '/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]+/S';   // 00-08, 11, 12, 14-31, 127
 
 		do
 		{
-			$str = preg_replace($non_displayables, '', $str, -1, $count);
+			$str = preg_replace($nonDisplayables, '', $str, -1, $count);
 		}
 		while ($count);
 
@@ -542,11 +580,12 @@ if (! function_exists('helper'))
 	 * both in and out of the 'helpers' directory of a namespaced directory.
 	 *
 	 * Will load ALL helpers of the matching name, in the following order:
-	 *   1. application/Helpers
+	 *   1. app/Helpers
 	 *   2. {namespace}/Helpers
 	 *   3. system/Helpers
 	 *
-	 * @param string|array $filenames
+	 * @param  string|array $filenames
+	 * @throws \CodeIgniter\Files\Exceptions\FileNotFoundException
 	 */
 	function helper($filenames)
 	{
@@ -573,40 +612,62 @@ if (! function_exists('helper'))
 				$filename .= '_helper';
 			}
 
-			$paths = $loader->search('Helpers/' . $filename);
-
-			if (! empty($paths))
+			// If the file is namespaced, we'll just grab that
+			// file and not search for any others
+			if (strpos($filename, '\\') !== false)
 			{
-				foreach ($paths as $path)
+				$path = $loader->locateFile($filename, 'Helpers');
+
+				if (empty($path))
 				{
-					if (strpos($path, APPPATH) === 0)
+					throw FileNotFoundException::forFileNotFound($filename);
+				}
+
+				$includes[] = $path;
+			}
+
+			// No namespaces, so search in all available locations
+			else
+			{
+				$paths = $loader->search('Helpers/' . $filename);
+
+				if (! empty($paths))
+				{
+					foreach ($paths as $path)
 					{
-						$appHelper = $path;
-					}
-					elseif (strpos($path, BASEPATH) === 0)
-					{
-						$systemHelper = $path;
-					}
-					else
-					{
-						$localIncludes[] = $path;
+						if (strpos($path, APPPATH) === 0)
+						{
+							// @codeCoverageIgnoreStart
+							$appHelper = $path;
+							// @codeCoverageIgnoreEnd
+						}
+						elseif (strpos($path, SYSTEMPATH) === 0)
+						{
+							$systemHelper = $path;
+						}
+						else
+						{
+							$localIncludes[] = $path;
+						}
 					}
 				}
-			}
 
-			// App-level helpers should override all others
-			if (! empty($appHelper))
-			{
-				$includes[] = $appHelper;
-			}
+				// App-level helpers should override all others
+				if (! empty($appHelper))
+				{
+					// @codeCoverageIgnoreStart
+					$includes[] = $appHelper;
+					// @codeCoverageIgnoreEnd
+				}
 
-			// All namespaced files get added in next
-			$includes = array_merge($includes, $localIncludes);
+				// All namespaced files get added in next
+				$includes = array_merge($includes, $localIncludes);
 
-			// And the system default one should be added in last.
-			if (! empty($systemHelper))
-			{
-				$includes[] = $systemHelper;
+				// And the system default one should be added in last.
+				if (! empty($systemHelper))
+				{
+					$includes[] = $systemHelper;
+				}
 			}
 		}
 
@@ -633,9 +694,9 @@ if (! function_exists('app_timezone'))
 	 *
 	 * @return string
 	 */
-	function app_timezone()
+	function app_timezone(): string
 	{
-		$config = config(\Config\App::class);
+		$config = config(App::class);
 
 		return $config->appTimezone;
 	}
@@ -652,9 +713,9 @@ if (! function_exists('csrf_token'))
 	 *
 	 * @return string
 	 */
-	function csrf_token()
+	function csrf_token(): string
 	{
-		$config = config(\Config\App::class);
+		$config = config(App::class);
 
 		return $config->CSRFTokenName;
 	}
@@ -671,7 +732,7 @@ if (! function_exists('csrf_hash'))
 	 *
 	 * @return string
 	 */
-	function csrf_hash()
+	function csrf_hash(): string
 	{
 		$security = Services::security(null, true);
 
@@ -686,11 +747,13 @@ if (! function_exists('csrf_field'))
 	/**
 	 * Generates a hidden input field for use within manually generated forms.
 	 *
+	 * @param string|null $id
+	 *
 	 * @return string
 	 */
-	function csrf_field()
+	function csrf_field(string $id = null): string
 	{
-		return '<input type="hidden" name="' . csrf_token() . '" value="' . csrf_hash() . '">';
+		return '<input type="hidden"' . (! empty($id) ? ' id="' . esc($id, 'attr') . '"' : '') . ' name="' . csrf_token() . '" value="' . csrf_hash() . '" />';
 	}
 }
 
@@ -713,7 +776,7 @@ if (! function_exists('force_https'))
 	 *
 	 * Not testable, as it will exit!
 	 *
-	 * @throws             \CodeIgniter\HTTP\RedirectException
+	 * @throws             \CodeIgniter\HTTP\Exceptions\HTTPException
 	 * @codeCoverageIgnore
 	 */
 	function force_https(int $duration = 31536000, RequestInterface $request = null, ResponseInterface $response = null)
@@ -743,7 +806,7 @@ if (! function_exists('force_https'))
 		$uri = $request->uri;
 		$uri->setScheme('https');
 
-		$uri = \CodeIgniter\HTTP\URI::createURIString(
+		$uri = URI::createURIString(
 						$uri->getScheme(), $uri->getAuthority(true), $uri->getPath(), // Absolute URIs should use a "/" for an empty path
 						$uri->getQuery(), $uri->getFragment()
 		);
@@ -771,6 +834,12 @@ if (! function_exists('old'))
 	 */
 	function old(string $key, $default = null, $escape = 'html')
 	{
+		// Ensure the session is loaded
+		if (session_status() === PHP_SESSION_NONE && ENVIRONMENT !== 'testing')
+		{
+			session();
+		}
+
 		$request = Services::request();
 
 		$value = $request->getOldInput($key);
@@ -812,7 +881,7 @@ if (! function_exists('redirect'))
 	 *
 	 * @return \CodeIgniter\HTTP\RedirectResponse
 	 */
-	function redirect(string $uri = null)
+	function redirect(string $uri = null): RedirectResponse
 	{
 		$response = Services::redirectResponse(null, true);
 
@@ -840,7 +909,7 @@ if (! function_exists('stringify_attributes'))
 	 *
 	 * @return string
 	 */
-	function stringify_attributes($attributes, $js = false): string
+	function stringify_attributes($attributes, bool $js = false): string
 	{
 		$atts = '';
 
@@ -882,9 +951,10 @@ if (! function_exists('is_really_writable'))
 	 *
 	 * @return boolean
 	 *
+	 * @throws             \Exception
 	 * @codeCoverageIgnore Not practical to test, as travis runs on linux
 	 */
-	function is_really_writable($file)
+	function is_really_writable(string $file): bool
 	{
 		// If we're on a Unix server with safe_mode off we call is_writable
 		if (DIRECTORY_SEPARATOR === '/' || ! ini_get('safe_mode'))
@@ -934,9 +1004,9 @@ if (! function_exists('slash_item'))
 	 * @return string|null The configuration item or NULL if
 	 * the item doesn't exist
 	 */
-	function slash_item($item)
+	function slash_item(string $item): ?string
 	{
-		$config     = config(\Config\App::class);
+		$config     = config(App::class);
 		$configItem = $config->{$item};
 
 		if (! isset($configItem) || empty(trim($configItem)))
@@ -965,7 +1035,7 @@ if (! function_exists('function_usable'))
 	 * terminate script execution if a disabled function is executed.
 	 *
 	 * The above described behavior turned out to be a bug in Suhosin,
-	 * but even though a fix was commited for 0.9.34 on 2012-02-12,
+	 * but even though a fix was committed for 0.9.34 on 2012-02-12,
 	 * that version is yet to be released. This function will therefore
 	 * be just temporary, but would probably be kept for a few years.
 	 *
@@ -976,7 +1046,7 @@ if (! function_exists('function_usable'))
 	 *
 	 * @codeCoverageIgnore This is too exotic
 	 */
-	function function_usable($function_name)
+	function function_usable(string $function_name): bool
 	{
 		static $_suhosin_func_blacklist;
 

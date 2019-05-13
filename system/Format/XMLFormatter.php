@@ -1,6 +1,4 @@
-<?php namespace CodeIgniter\Format;
-
-use CodeIgniter\Format\Exceptions\FormatException;
+<?php
 
 /**
  * CodeIgniter
@@ -9,7 +7,7 @@ use CodeIgniter\Format\Exceptions\FormatException;
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,11 +29,19 @@ use CodeIgniter\Format\Exceptions\FormatException;
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
+ */
+
+namespace CodeIgniter\Format;
+
+use CodeIgniter\Format\Exceptions\FormatException;
+
+/**
+ * XML data formatter
  */
 class XMLFormatter implements FormatterInterface
 {
@@ -45,20 +51,23 @@ class XMLFormatter implements FormatterInterface
 	 *
 	 * @param $data
 	 *
-	 * @return mixed
+	 * @return string|boolean (XML string | false)
 	 */
-	public function format(array $data)
+	public function format($data)
 	{
 		// SimpleXML is installed but default
 		// but best to check, and then provide a fallback.
 		if (! extension_loaded('simplexml'))
 		{
+			// never thrown in travis-ci
+			// @codeCoverageIgnoreStart
 			throw FormatException::forMissingExtension();
+			// @codeCoverageIgnoreEnd
 		}
 
 		$output = new \SimpleXMLElement('<?xml version="1.0"?><response></response>');
 
-		$this->arrayToXML($data, $output);
+		$this->arrayToXML((array)$data, $output);
 
 		return $output->asXML();
 	}

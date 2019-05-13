@@ -1,6 +1,4 @@
-<?php namespace CodeIgniter;
-
-use CodeIgniter\I18n\Time;
+<?php
 
 /**
  * CodeIgniter
@@ -9,7 +7,7 @@ use CodeIgniter\I18n\Time;
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -31,16 +29,25 @@ use CodeIgniter\I18n\Time;
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
+ */
+
+namespace CodeIgniter;
+
+use CodeIgniter\Exceptions\EntityException;
+use CodeIgniter\I18n\Time;
+use CodeIgniter\Exceptions\CastException;
+
+/**
+ * Entity encapsulation, for use with CodeIgniter\Model
  */
 class Entity
 {
-	protected $_options = [
-		/*
+		/**
 		 * Maps names used in sets and gets against unique
 		 * names within the class, allowing independence from
 		 * database column names.
@@ -50,9 +57,10 @@ class Entity
 		 *      'db_name' => 'class_name'
 		 *  ];
 		 */
+	protected $_options = [
 		'datamap' => [],
 
-		/*
+		/**
 		 * Define properties that are automatically converted to Time instances.
 		 */
 		'dates'   => [
@@ -61,7 +69,7 @@ class Entity
 			'deleted_at',
 		],
 
-		/*
+		/**
 		 * Array of field names and the type of value to cast them as
 		 * when they are accessed.
 		 */
@@ -78,7 +86,7 @@ class Entity
 	protected $_original = [];
 
 	/**
-	 * Holds info whenever prperties have to be casted
+	 * Holds info whenever properties have to be casted
 	 *
 	 * @var boolean
 	 **/
@@ -117,11 +125,15 @@ class Entity
 	 * that may or may not exist.
 	 *
 	 * @param array $data
+	 *
+	 * @return \CodeIgniter\Entity
 	 */
 	public function fill(array $data)
 	{
 		foreach ($data as $key => $value)
 		{
+			$key = $this->mapProperty($key);
+
 			$method = 'set' . str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $key)));
 
 			if (method_exists($this, $method))
@@ -133,6 +145,8 @@ class Entity
 				$this->$key = $value;
 			}
 		}
+
+		return $this;
 	}
 
 	//--------------------------------------------------------------------
@@ -147,6 +161,7 @@ class Entity
 	 * @param boolean $cast        If true, properties will be casted.
 	 *
 	 * @return array
+	 * @throws \Exception
 	 */
 	public function toArray(bool $onlyChanged = false, bool $cast = true): array
 	{
@@ -164,7 +179,7 @@ class Entity
 				continue;
 			}
 
-			if ($onlyChanged && $this->_original[$key] === null && $value === null)
+			if ($onlyChanged && ! $this->hasPropertyChanged($key, $value))
 			{
 				continue;
 			}
@@ -187,6 +202,54 @@ class Entity
 	//--------------------------------------------------------------------
 
 	/**
+	 * Converts the properties of this class into an array. Unlike toArray()
+	 * this will not cast the data or use any magic accessors. It simply
+	 * returns the raw data for use when saving to the model, etc.
+	 *
+	 * @param boolean $onlyChanged
+	 *
+	 * @return array
+	 */
+	public function toRawArray(bool $onlyChanged = false): array
+	{
+		$return = [];
+
+		$properties = get_object_vars($this);
+
+		foreach ($properties as $key => $value)
+		{
+			if (substr($key, 0, 1) === '_')
+			{
+				continue;
+			}
+
+			if ($onlyChanged && ! $this->hasPropertyChanged($key, $value))
+			{
+				continue;
+			}
+
+			$return[$key] = $this->$key;
+		}
+
+		return $return;
+	}
+
+	//--------------------------------------------------------------------
+
+	/**
+	 * Checks a property to see if it has changed since the entity was created.
+	 *
+	 * @param string $key
+	 * @param null   $value
+	 *
+	 * @return boolean
+	 */
+	protected function hasPropertyChanged(string $key, $value = null): bool
+	{
+		return ! (($this->_original[$key] === null && $value === null) || $this->_original[$key] === $value);
+	}
+
+	/**
 	 * Magic method to allow retrieval of protected and private
 	 * class properties either by their name, or through a `getCamelCasedProperty()`
 	 * method.
@@ -199,6 +262,7 @@ class Entity
 	 * @param string $key
 	 *
 	 * @return mixed
+	 * @throws \Exception
 	 */
 	public function __get(string $key)
 	{
@@ -232,6 +296,11 @@ class Entity
 			$result = $this->castAs($result, $this->_options['casts'][$key]);
 		}
 
+		if (! isset($result) && ! property_exists($this, $key))
+		{
+			throw EntityException::forTryingToAccessNonExistentProperty($key, get_called_class());
+		}
+
 		return $result;
 	}
 
@@ -250,6 +319,7 @@ class Entity
 	 * @param null   $value
 	 *
 	 * @return $this
+	 * @throws \Exception
 	 */
 	public function __set(string $key, $value = null)
 	{
@@ -261,24 +331,42 @@ class Entity
 			$value = $this->mutateDate($value);
 		}
 
-		// Array casting requires that we serialize the value
-		// when setting it so that it can easily be stored
-		// back to the database.
-		if (array_key_exists($key, $this->_options['casts']) && $this->_options['casts'][$key] === 'array')
+		$isNullable = false;
+		$castTo     = false;
+
+		if (array_key_exists($key, $this->_options['casts']))
 		{
-			$value = serialize($value);
+			$isNullable = substr($this->_options['casts'][$key], 0, 1) === '?';
+			$castTo     = $isNullable ? substr($this->_options['casts'][$key], 1) : $this->_options['casts'][$key];
 		}
 
-		// JSON casting requires that we JSONize the value
-		// when setting it so that it can easily be stored
-		// back to the database.
-		if (function_exists('json_encode') && array_key_exists($key, $this->_options['casts']) && ($this->_options['casts'][$key] === 'json' || $this->_options['casts'][$key] === 'json-array'))
+		if (! $isNullable || ! is_null($value))
 		{
-			$value = json_encode($value);
+			// Array casting requires that we serialize the value
+			// when setting it so that it can easily be stored
+			// back to the database.
+			if ($castTo === 'array')
+			{
+				$value = serialize($value);
+			}
+
+			// JSON casting requires that we JSONize the value
+			// when setting it so that it can easily be stored
+			// back to the database.
+			if (($castTo === 'json' || $castTo === 'json-array') && function_exists('json_encode'))
+			{
+				$value = json_encode($value);
+
+				if (json_last_error() !== JSON_ERROR_NONE)
+				{
+					throw CastException::forInvalidJsonFormatException(json_last_error());
+				}
+			}
 		}
 
 		// if a set* method exists for this key,
 		// use that method to insert this value.
+		// *) should be outside $isNullable check - SO maybe wants to do sth with null value automatically
 		$method = 'set' . str_replace(' ', '', ucwords(str_replace(['-', '_'], ' ', $key)));
 		if (method_exists($this, $method))
 		{
@@ -306,6 +394,8 @@ class Entity
 	 * attribute will be reset to that default value.
 	 *
 	 * @param string $key
+	 *
+	 * @throws \ReflectionException
 	 */
 	public function __unset(string $key)
 	{
@@ -382,6 +472,7 @@ class Entity
 	 * @param $value
 	 *
 	 * @return \CodeIgniter\I18n\Time
+	 * @throws \Exception
 	 */
 	protected function mutateDate($value)
 	{
@@ -412,18 +503,30 @@ class Entity
 
 	/**
 	 * Provides the ability to cast an item as a specific data type.
+	 * Add ? at the beginning of $type  (i.e. ?string) to get NULL instead of casting $value if $value === null
 	 *
 	 * @param $value
 	 * @param string $type
 	 *
 	 * @return mixed
+	 * @throws \Exception
 	 */
 
 	protected function castAs($value, string $type)
 	{
+		if (substr($type, 0, 1) === '?')
+		{
+			if ($value === null)
+			{
+				return null;
+			}
+			$type = substr($type, 1);
+		}
+
 		switch($type)
 		{
-			case 'integer':
+			case 'int':
+			case 'integer': //alias for 'integer'
 				$value = (int)$value;
 				break;
 			case 'float':
@@ -435,7 +538,8 @@ class Entity
 			case 'string':
 				$value = (string)$value;
 				break;
-			case 'boolean':
+			case 'bool':
+			case 'boolean': //alias for 'boolean'
 				$value = (bool)$value;
 				break;
 			case 'object':
@@ -475,6 +579,7 @@ class Entity
 	 * @param boolean $asArray
 	 *
 	 * @return mixed
+	 * @throws \CodeIgniter\Exceptions\CastException
 	 */
 	private function castAsJson($value, bool $asArray = false)
 	{

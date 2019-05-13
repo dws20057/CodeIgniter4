@@ -1,4 +1,4 @@
-<?php namespace CodeIgniter\Database\MySQLi;
+<?php
 
 /**
  * CodeIgniter
@@ -7,7 +7,7 @@
  *
  * This content is released under the MIT License (MIT)
  *
- * Copyright (c) 2014-2018 British Columbia Institute of Technology
+ * Copyright (c) 2014-2019 British Columbia Institute of Technology
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,16 +29,18 @@
  *
  * @package    CodeIgniter
  * @author     CodeIgniter Dev Team
- * @copyright  2014-2018 British Columbia Institute of Technology (https://bcit.ca/)
+ * @copyright  2014-2019 British Columbia Institute of Technology (https://bcit.ca/)
  * @license    https://opensource.org/licenses/MIT	MIT License
  * @link       https://codeigniter.com
- * @since      Version 3.0.0
+ * @since      Version 4.0.0
  * @filesource
  */
 
+namespace CodeIgniter\Database\MySQLi;
+
 use CodeIgniter\Database\BaseConnection;
 use CodeIgniter\Database\ConnectionInterface;
-use \CodeIgniter\Database\Exceptions\DatabaseException;
+use CodeIgniter\Database\Exceptions\DatabaseException;
 
 /**
  * Connection for MySQLi
@@ -87,7 +89,7 @@ class Connection extends BaseConnection implements ConnectionInterface
 	 * @return mixed
 	 * @throws \CodeIgniter\Database\Exceptions\DatabaseException
 	 */
-	public function connect($persistent = false)
+	public function connect(bool $persistent = false)
 	{
 		// Do we have a socket path?
 		if ($this->hostname[0] === '/')
@@ -156,13 +158,13 @@ class Connection extends BaseConnection implements ConnectionInterface
 					//
 					// https://secure.php.net/ChangeLog-5.php#5.6.16
 					// https://bugs.php.net/bug.php?id=68344
-					elseif (defined('MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT'))
+					elseif (defined('MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT') && version_compare($this->mysqli->client_info, '5.6', '>='))
 					{
-						$this->mysqli->options(MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT, true);
+						$client_flags += MYSQLI_CLIENT_SSL_DONT_VERIFY_SERVER_CERT;
 					}
 				}
 
-				$client_flags |= MYSQLI_CLIENT_SSL;
+				$client_flags += MYSQLI_CLIENT_SSL;
 				$this->mysqli->ssl_set(
 					$ssl['key'] ?? null, $ssl['cert'] ?? null, $ssl['ca'] ?? null,
 					$ssl['capath'] ?? null, $ssl['cipher'] ?? null
@@ -170,42 +172,56 @@ class Connection extends BaseConnection implements ConnectionInterface
 			}
 		}
 
-		if ($this->mysqli->real_connect($hostname, $this->username, $this->password,
-			$this->database, $port, $socket, $client_flags)
-		)
+		try
 		{
-			// Prior to version 5.7.3, MySQL silently downgrades to an unencrypted connection if SSL setup fails
-			if (($client_flags & MYSQLI_CLIENT_SSL) && version_compare($this->mysqli->client_info, '5.7.3', '<=') && empty($this->mysqli->query("SHOW STATUS LIKE 'ssl_cipher'")
-									->fetch_object()->Value)
+			if ($this->mysqli->real_connect($hostname, $this->username, $this->password,
+				$this->database, $port, $socket, $client_flags)
 			)
 			{
-				$this->mysqli->close();
-				$message = 'MySQLi was configured for an SSL connection, but got an unencrypted connection instead!';
-				log_message('error', $message);
-
-				if ($this->DBDebug)
+				// Prior to version 5.7.3, MySQL silently downgrades to an unencrypted connection if SSL setup fails
+				if (($client_flags & MYSQLI_CLIENT_SSL) && version_compare($this->mysqli->client_info, '5.7.3', '<=')
+					&& empty($this->mysqli->query("SHOW STATUS LIKE 'ssl_cipher'")
+										  ->fetch_object()->Value)
+				)
 				{
-					throw new DatabaseException($message);
+					$this->mysqli->close();
+					$message = 'MySQLi was configured for an SSL connection, but got an unencrypted connection instead!';
+					log_message('error', $message);
+
+					if ($this->DBDebug)
+					{
+						throw new DatabaseException($message);
+					}
+
+					return false;
 				}
 
-				return false;
-			}
-
-			if (! $this->mysqli->set_charset($this->charset))
-			{
-				log_message('error',
-					"Database: Unable to set the configured connection charset ('{$this->charset}').");
-				$this->mysqli->close();
-
-				if ($this->db->debug)
+				if (! $this->mysqli->set_charset($this->charset))
 				{
-					throw new DatabaseException('Unable to set client connection character set: ' . $this->charset);
+					log_message('error',
+						"Database: Unable to set the configured connection charset ('{$this->charset}').");
+					$this->mysqli->close();
+
+					if ($this->db->debug)
+					{
+						throw new DatabaseException('Unable to set client connection character set: ' . $this->charset);
+					}
+
+					return false;
 				}
 
-				return false;
+				return $this->mysqli;
 			}
+		}
+		catch (\Throwable $e)
+		{
+			// Clean sensitive information from errors.
+			$msg = $e->getMessage();
 
-			return $this->mysqli;
+			$msg = str_replace($this->username, '****', $msg);
+			$msg = str_replace($this->password, '****', $msg);
+
+			throw new \mysqli_sql_exception($msg, $e->getCode(), $e);
 		}
 
 		return false;
@@ -229,6 +245,8 @@ class Connection extends BaseConnection implements ConnectionInterface
 
 	/**
 	 * Close the database connection.
+	 *
+	 * @return void
 	 */
 	protected function _close()
 	{
@@ -242,9 +260,9 @@ class Connection extends BaseConnection implements ConnectionInterface
 	 *
 	 * @param string $databaseName
 	 *
-	 * @return mixed
+	 * @return boolean
 	 */
-	public function setDatabase(string $databaseName)
+	public function setDatabase(string $databaseName): bool
 	{
 		if ($databaseName === '')
 		{
@@ -271,9 +289,9 @@ class Connection extends BaseConnection implements ConnectionInterface
 	/**
 	 * Returns a string containing the version of the database being used.
 	 *
-	 * @return mixed
+	 * @return string
 	 */
-	public function getVersion()
+	public function getVersion(): string
 	{
 		if (isset($this->dataCache['version']))
 		{
@@ -297,7 +315,7 @@ class Connection extends BaseConnection implements ConnectionInterface
 	 *
 	 * @return mixed
 	 */
-	public function execute($sql)
+	public function execute(string $sql)
 	{
 		while ($this->connID->more_results())
 		{
@@ -322,7 +340,7 @@ class Connection extends BaseConnection implements ConnectionInterface
 	 *
 	 * @return string
 	 */
-	protected function prepQuery($sql)
+	protected function prepQuery(string $sql): string
 	{
 		// mysqli_affected_rows() returns 0 for "DELETE FROM TABLE" queries. This hack
 		// modifies the query so that it a proper number of affected rows is returned.
@@ -339,11 +357,11 @@ class Connection extends BaseConnection implements ConnectionInterface
 	/**
 	 * Returns the total number of rows affected by this query.
 	 *
-	 * @return mixed
+	 * @return integer
 	 */
 	public function affectedRows(): int
 	{
-		return $this->connID->affected_rows;
+		return $this->connID->affected_rows ?? 0;
 	}
 
 	//--------------------------------------------------------------------
@@ -378,7 +396,7 @@ class Connection extends BaseConnection implements ConnectionInterface
 	 *
 	 * @return string
 	 */
-	protected function _listTables($prefixLimit = false): string
+	protected function _listTables(bool $prefixLimit = false): string
 	{
 		$sql = 'SHOW TABLES FROM ' . $this->escapeIdentifiers($this->database);
 
@@ -423,19 +441,19 @@ class Connection extends BaseConnection implements ConnectionInterface
 		}
 		$query = $query->getResultObject();
 
-		$retval = [];
+		$retVal = [];
 		for ($i = 0, $c = count($query); $i < $c; $i++)
 		{
-			$retval[$i]       = new \stdClass();
-			$retval[$i]->name = $query[$i]->Field;
+			$retVal[$i]       = new \stdClass();
+			$retVal[$i]->name = $query[$i]->Field;
 
-			sscanf($query[$i]->Type, '%[a-z](%d)', $retval[$i]->type, $retval[$i]->max_length);
+			sscanf($query[$i]->Type, '%[a-z](%d)', $retVal[$i]->type, $retVal[$i]->max_length);
 
-			$retval[$i]->default     = $query[$i]->Default;
-			$retval[$i]->primary_key = (int)($query[$i]->Key === 'PRI');
+			$retVal[$i]->default     = $query[$i]->Default;
+			$retVal[$i]->primary_key = (int)($query[$i]->Key === 'PRI');
 		}
 
-		return $retval;
+		return $retVal;
 	}
 
 	//--------------------------------------------------------------------
@@ -534,7 +552,7 @@ class Connection extends BaseConnection implements ConnectionInterface
 		}
 		$query = $query->getResultObject();
 
-		$retval = [];
+		$retVal = [];
 		foreach ($query as $row)
 		{
 			$obj                     = new \stdClass();
@@ -542,10 +560,10 @@ class Connection extends BaseConnection implements ConnectionInterface
 			$obj->table_name         = $row->TABLE_NAME;
 			$obj->foreign_table_name = $row->REFERENCED_TABLE_NAME;
 
-			$retval[] = $obj;
+			$retVal[] = $obj;
 		}
 
-		return $retval;
+		return $retVal;
 	}
 
 	//--------------------------------------------------------------------
@@ -559,7 +577,7 @@ class Connection extends BaseConnection implements ConnectionInterface
 	 *
 	 * @return array
 	 */
-	public function error()
+	public function error(): array
 	{
 		if (! empty($this->mysqli->connect_errno))
 		{
@@ -582,7 +600,7 @@ class Connection extends BaseConnection implements ConnectionInterface
 	 *
 	 * @return integer
 	 */
-	public function insertID()
+	public function insertID(): int
 	{
 		return $this->connID->insert_id;
 	}
